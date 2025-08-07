@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from os.path import join, dirname
-from config import REPO_DIR, EM_DATA_DIR, DATA_DIR
+from config.dir import  EM_DATA_DIR, DATA_DIR, REPO_DIR
 from utils.textgrid import TextGrid
 
 def load_textgrids(stories, data_dir: str):
