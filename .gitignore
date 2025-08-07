@@ -2,3 +2,9 @@ config/*
 # remove file
 generalisation.ipynb
 generalisation.ipynb
+
+
+# Python specific
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
