@@ -1,7 +1,5 @@
 config/*
 results/*
-# remove file
-generalisation.ipynb
 
 # Python specific
 __pycache__/
