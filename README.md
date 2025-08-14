@@ -9,7 +9,6 @@ This repository contains code and resources related to fMRI data analysis for na
 
 ## Repository Structure
 
-- `/` - Analysis scripts (Python)
 - `/*.ipynb` - Jupyter notebooks for exploratory analysis
 - `/results` - Output results and features
 
