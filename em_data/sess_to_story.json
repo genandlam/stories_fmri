@@ -10,7 +10,6 @@
         ],
         "wheretheressmoke"
     ],
-
     "11": [
         [
             "againstthewind",
@@ -19,8 +18,22 @@
             "ifthishaircouldtalk",
             "lifereimagined",
             "stumblinginthedark"
-
         ],
         "wheretheressmoke"
-    ]   
+    ],
+    "canonical": [
+        [
+            "alternateithicatom",
+            "avatar",
+            "howtodraw",
+            "legacy",
+            "life",
+            "myfirstdaywiththeyankees",
+            "naked",
+            "odetostepfather",
+            "souls",
+            "undertheinfluence"
+        ],
+        "wheretheressmoke"
+    ]
 }
