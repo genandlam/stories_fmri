@@ -16,7 +16,7 @@ This repository contains code and resources related to fMRI data analysis for na
 
 1. Clone the repository:
     ```
-    git clone https://github.com/yourusername/stories_fmri.git
+    git clone https://github.com/genandlam/stories_fmri.git
     ```
 2. Install dependencies (see `requirements.txt`).
 
