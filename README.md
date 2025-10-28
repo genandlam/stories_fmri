@@ -20,6 +20,15 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
 2. Install dependencies (see `requirements.txt`).
 
+3. Features space 
+    ```
+    $ python feature.py --subject sub-UTS03 --feature eng1000 --sessions 1
+    ```
+4. Features space 
+    ```
+    $ python semantic_model.py --subject sub-UTS03 --feature eng1000 --sessions 1 --savemodel False
+    ```
+
 ## Usage
 
 - Run analysis scripts in `run in jupiternotebooks`.

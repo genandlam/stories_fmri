@@ -123,7 +123,7 @@ if __name__ == "__main__":
     parser.add_argument("--subject", type=str, required=True)
     parser.add_argument("--trim", type=int, default=5)
     parser.add_argument("--feature", type=str, default="eng1000")
-    parser.add_argument("--sessions", nargs='+', type=int, default=["temp"])
+    parser.add_argument("--sessions", nargs='+', type=str, default=["temp"])
     logging.basicConfig(level=logging.INFO)
 	
     args = parser.parse_args()
