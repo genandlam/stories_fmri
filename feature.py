@@ -128,7 +128,7 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 	globals().update(args.__dict__)
 
-	assert np.amax(subject) <= 2 and np.amin(subject) >=1, "1 <= session <= 5"
+	assert np.amax(subject) <= 2 and np.amin(subject) >=1, "1 <= session <= 2"
 	subject = list(map(str, subject))
 	sessions = list(map(str, sessions))
 	s = '_'.join(sessions)
@@ -172,7 +172,7 @@ if __name__ == "__main__":
 	print("length of run_on_set:", len(run_on_set), "with values:", run_on_set)
 
 	test_resp,_ = get_response(test_stories, subject[0])
-	print("zRresp: ", test_resp.shape)
+	print("zRresp Test: ", test_resp.shape)
 
 	print("Saving features to:", save_location)
 

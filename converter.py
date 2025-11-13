@@ -38,7 +38,7 @@ def check_file(file):
         return True
     
 def check_mean_sf(X_train,X_test):
-    
+
     if np.mean(X_train) >0.0001 or np.std(X_train) >1.0001:
         print("train are not standardized properly.")
         X_train= zscore(np.array(X_train, dtype=float))
@@ -237,9 +237,12 @@ if __name__ == "__main__":
     parser.add_argument("--threshold", type=int, default=1000)
     logging.basicConfig(level=logging.INFO)
 	
+    assert np.amax(subject) <= 2 and np.amin(subject) >=1, "1 <= session <= 2"
+    
     args = parser.parse_args()
     globals().update(args.__dict__)
     sessions = list(map(str, sessions))
+    subject = list(map(str, subject))
     sess = '_'.join(sessions)
     subjs = '_'.join(subject)
 
