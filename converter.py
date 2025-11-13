@@ -21,9 +21,9 @@ from utils.SemanticModel import SemanticModel
 
 def open_json(subj,sess,file):
     
-    #dir=os.path.join( FEATURE_DATA_DIR,subj)
     with open(os.path.join(FEATURE_DATA_DIR,subj,sess,file), "r")  as f:
         data = json.load(f)
+    print(f"Loaded {file} with shape: ", np.array(data).shape)
     return  np.array(data, dtype=float)
 
 
@@ -50,6 +50,20 @@ def check_mean_sf(X_train,X_test):
 
     return X_train,X_test
 
+def select_voxels(subj,sess,threshold):
+
+    X_train = open_json(subj,sess,'features_train.json')
+    X_test = open_json(subj,sess,'features_test.json')
+    X_train,X_test=check_mean_sf(X_train,X_test)
+
+    scores_train = open_json(subj,sess,'scores_train.npy')
+    best_voxels = np.argsort(scores_train)[::-1][:threshold]
+
+    print("(n_samples_train, n_features) =", X_train[:, best_voxels].shape)
+    print("(n_samples_test, n_features) =", X_test[:, best_voxels].shape)
+
+    return X_train[:, best_voxels],X_test[:, best_voxels]
+
 def create_run_on_set(subj,sess):
     run_onsets=open_json(subj,sess,'run_on.json')
     run_onsets=list(map(int, run_onsets))
@@ -65,7 +79,8 @@ def save_model(pipeline,subj,sess):
     return directory
 
 def model(subj,sess,X_train,Y_train,X_test,Y_test):
-    run_onsets= create_run_on_set(subj,sess)
+    run_onsets= create_run_on_set(subj[0],sess)
+    run_onsets= create_run_on_set(subj[0],sess)
     n_samples_train = X_train.shape[0]
     cv = generate_leave_one_run_out(n_samples_train, run_onsets)
     cv = check_cv(cv)  # copy the cross-validation splitter into a reusable list
@@ -212,63 +227,58 @@ def plot_RGB(scores_test,pipeline,subj,dir,backend):
     plt.show()
     plt.savefig(os.path.join(dir,subj+'RGB_semantic_model_voxel.png'))
 
-
-
 if __name__ == "__main__":
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--subject", type=str, required=True)
+    parser.add_argument("--subject",  nargs='+', type=str, required=True)
     parser.add_argument("--sessions", nargs='+', type=str, default=["temp"])
     parser.add_argument("--savemodel", type=bool, default=False)
+    parser.add_argument("--threshold", type=int, default=1000)
     logging.basicConfig(level=logging.INFO)
 	
     args = parser.parse_args()
     globals().update(args.__dict__)
     sessions = list(map(str, sessions))
     sess = '_'.join(sessions)
+    subjs = '_'.join(subject)
 
+    X_train_best,X_test_best= select_voxels(subject[0],sess,threshold)
+    X_train_best_2,X_test_best_2= select_voxels(subject[1],sess,threshold)
 
-    X_train = open_json(subject,sess,'features_train.json')
-    X_test = open_json(subject,sess,'features_test.json')
-    print("(n_samples_train, n_features) =", X_train.shape)
-    print("(n_samples_test, n_features) =", X_test.shape)
-    X_train,X_test=check_mean_sf(X_train,X_test)
-    Y_train = open_json(subject,sess,'fmri_train.json')
-    Y_test = open_json(subject,sess,'fmri_test.json')
-    print("(n_samples_train, n_voxels) =", Y_train.shape)
-    print("( n_samples_test, n_voxels) =", Y_test.shape)
+    X_train_concat = np.concatenate([X_train_best, X_train_best_2], axis=0)
+    X_test_concat = np.concatenate([X_test_best, X_test_best_2], axis=0)
+
+    Y_train = open_json(subject[2],'fmri_train.json')
+    Y_test= open_json(subject_2,'fmri_test.json')
     Y_train,Y_test=check_mean_sf(Y_train,Y_test)
-
+    Y_train_concat = np.concatenate([Y_train, Y_train], axis=0)
+    Y_test_concat = np.concatenate([Y_test, Y_test], axis=0)
 
     if savemodel == True:
 
-        pipeline,scores_train,scores_test,alphas,backend = model(subject,sess,X_train,Y_train,X_test,Y_test)
-        dir = save_model(pipeline,subject,sess)
+        pipeline,scores_train,scores_test,alphas,backend = model(subject,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
+        dir = save_model(pipeline,subjs,sess)
         print(f"Model saved in {dir}")
-        save_predict(pipeline,X_train,X_test,dir)
+        save_predict(pipeline,X_train_concat,Y_test_concat,dir)
         save_scores(scores_train,scores_test,dir)
         save_histogram("Train Data",scores_train,dir)
         save_histogram("Test Data",scores_test,dir)
-        save_cortex("Train Data",subject,scores_train,dir)
-        save_cortex("Test Data",subject,scores_test,dir)
+        #save_cortex("Train Data",subjs,scores_train,dir)
+        #save_cortex("Test Data",subjs,scores_test,dir)
         plot_alphas(backend,dir,alphas)
 
-        
-
-    elif check_file(os.path.join(RESULTS_DATA_DIR,subject,sess,'semantic_model',subject+"_"+sess+'Semantic_model.pkl')):
+    elif check_file(os.path.join(RESULTS_DATA_DIR,subject,subjs,'semantic_model',subjs+"_"+sess+'Semantic_model.pkl')):
         print("Loading existing model...")
-        pipeline,dir,backend = load_model(subject,sess)
-        scores_train = pipeline.score(X_train,Y_train)
+        pipeline,dir,backend = load_model(subjs,sess)
+        scores_train = pipeline.score(X_train_concat,Y_train_concat)
         print("(n_voxels train,) =", scores_train.shape)
-        scores_test = pipeline.score(X_test, Y_test)
+        scores_test = pipeline.score(X_test_concat,Y_test_concat)
         print("(n_voxels test,) =", scores_test.shape)
-        plot_RGB(scores_test,pipeline,subject,dir,backend)
+        plot_RGB(scores_test,pipeline,subjs,dir,backend)
 
     else:
 
-        pipeline,scores_train,scores_test,alphas = model(subject,sess,X_train,Y_train,X_test,Y_test)
-    
+        pipeline,scores_train,scores_test,alphas = model(subject,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
 
-        
 
