@@ -38,6 +38,7 @@ def check_file(file):
         return True
     
 def check_mean_sf(X_train,X_test):
+    
     if np.mean(X_train) >0.0001 or np.std(X_train) >1.0001:
         print("train are not standardized properly.")
         X_train= zscore(np.array(X_train, dtype=float))

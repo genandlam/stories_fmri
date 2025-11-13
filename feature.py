@@ -90,9 +90,8 @@ def apply_zscore_and_hrf(stories, downsampled_feat, trim):
 	"""
 	stim = [zscore(downsampled_feat[s][5+trim:-trim]) for s in stories]
 	stim = np.vstack(stim)
-	#delays = range(1, ndelays+1)
-	#delstim = make_delayed(stim, delays)
-	return stim#delstim
+
+	return stim
 
 def get_response(stories, subject,run_on_set=None,remove=None):
 
@@ -119,62 +118,76 @@ def get_response(stories, subject,run_on_set=None,remove=None):
 if __name__ == "__main__":
 
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--subject", type=str, required=True)
-    parser.add_argument("--trim", type=int, default=5)
-    parser.add_argument("--feature", type=str, default="eng1000")
-    parser.add_argument("--sessions", nargs='+', type=str, default=["temp"])
-    logging.basicConfig(level=logging.INFO)
-	
-    args = parser.parse_args()
-    globals().update(args.__dict__)
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--subject", nargs='+', type=str, required=True)
+	parser.add_argument("--trim", type=int, default=5)
+	parser.add_argument("--feature", type=str, default="eng1000")
+	parser.add_argument("--sessions", nargs='+', type=str, default=["temp"])
+	logging.basicConfig(level=logging.INFO)
 
-    #assert np.amax(sessions) <= 5 and np.amin(sessions) >=1, "1 <= session <= 5"
+	args = parser.parse_args()
+	globals().update(args.__dict__)
 
-    sessions = list(map(str, sessions))
+	assert np.amax(subject) <= 2 and np.amin(subject) >=1, "1 <= session <= 5"
+	subject = list(map(str, subject))
+	sessions = list(map(str, sessions))
+	s = '_'.join(sessions)
+	if len(subject) > 1:
+		remove = 1
+		subjects = '_'.join(subject)
+		save_location = os.path.join(REPO_DIR, "feature",feature, subjects,s)
+	else:
+		remove = None
+		save_location = os.path.join(REPO_DIR, "feature",feature, subject[0],s)
+		#subjects = subject[0]
 
-    with open(os.path.join(REPO_DIR,'em_data', "sess_to_story.json"), "r") as f:
-        sess_to_story = json.load(f)
-	
-    train_stories, test_stories = [], []
-    for sess in sessions:
-        stories, tstory = sess_to_story[sess][0], sess_to_story[sess][1]
-        train_stories.extend(stories)
-        if tstory not in test_stories:
-            test_stories.append(tstory)
-    assert len(set(train_stories) & set(test_stories)) == 0, "Train - Test overlap!"
-    allstories = list(set(train_stories) | set(test_stories))
+	os.makedirs(save_location, exist_ok=True)
 
-    downsampled_feat = get_feature_space(feature, allstories)
-    delRstim = apply_zscore_and_hrf(train_stories, downsampled_feat, trim)
-    delTest = apply_zscore_and_hrf(test_stories, downsampled_feat, trim)
-    print('Stimulus trainset:',delRstim.shape)
-    print('Stimulus testset:',delTest.shape)
-	
-    # Response
-    zRresp,run_on_set = get_response(train_stories, subject)
-    print("zRresp: ", zRresp.shape)
-    test_resp,run_on_test = get_response(test_stories, subject)
-    print("zRresp: ", test_resp.shape)
-    print("length of run_on_set:", len(run_on_set), "with values:", run_on_set)
+	with open(os.path.join(REPO_DIR,'em_data', "sess_to_story.json"), "r") as f:
+		sess_to_story = json.load(f)
 
-    s = '_'.join(sessions)
-    save_location = os.path.join(REPO_DIR, "feature",feature, subject,s)
-    print("Saving features to:", save_location)
-    os.makedirs(save_location, exist_ok=True)
-	
-    with open(save_location+'/run_on.json', "w") as file:
-        json.dump(run_on_set,file, indent=4)
+	train_stories, test_stories = [], []
+	for sess in sessions:
+		stories, tstory = sess_to_story[sess][0], sess_to_story[sess][1]
+		train_stories.extend(stories)
+		if tstory not in test_stories:
+			test_stories.append(tstory)
+	assert len(set(train_stories) & set(test_stories)) == 0, "Train - Test overlap!"
+	allstories = list(set(train_stories) | set(test_stories))
 
-    with open(save_location+'/fmri_train.json', "w") as file:
-        json.dump(convert_to_serializable(zRresp),file, indent=4)
-    with open(save_location+'/features_train.json', "w") as file:
-        json.dump(convert_to_serializable(delRstim),file, indent=4)
-		
-    with open(save_location+'/features_test.json', "w") as file:
-        json.dump(convert_to_serializable(delTest),file, indent=4)
-    with open(save_location+'/fmri_test.json', "w") as file:
-        json.dump(convert_to_serializable(test_resp),file, indent=4)
+	downsampled_feat = get_feature_space(feature, allstories)
+	delRstim = apply_zscore_and_hrf(train_stories, downsampled_feat, trim)
+	delTest = apply_zscore_and_hrf(test_stories, downsampled_feat, trim)
+	print('Stimulus trainset:',delRstim.shape)
+	print('Stimulus testset:',delTest.shape)
+
+	# Response
+	if remove is not None:
+		zRresp,run_on_set = get_response(train_stories, subject[0],remove=remove)
+		zRresp_2,run_on_set = get_response(train_stories,run_on_set, subject[1],remove=remove)
+		run_on_set = run_on_set[:-1]
+	else:
+		zRresp,run_on_set = get_response(train_stories, subject)[0]
+	print("zRresp: ", zRresp.shape)
+	print("length of run_on_set:", len(run_on_set), "with values:", run_on_set)
+
+	test_resp,_ = get_response(test_stories, subject[0])
+	print("zRresp: ", test_resp.shape)
+
+	print("Saving features to:", save_location)
+
+	with open(save_location+'/run_on.json', "w") as file:
+		json.dump(run_on_set,file, indent=4)
+
+	with open(save_location+'/fmri_train.json', "w") as file:
+		json.dump(convert_to_serializable(zRresp),file, indent=4)
+	with open(save_location+'/features_train.json', "w") as file:
+		json.dump(convert_to_serializable(delRstim),file, indent=4)
+
+	with open(save_location+'/features_test.json', "w") as file:
+		json.dump(convert_to_serializable(delTest),file, indent=4)
+	with open(save_location+'/fmri_test.json', "w") as file:
+		json.dump(convert_to_serializable(test_resp),file, indent=4)
 
 
 
