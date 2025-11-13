@@ -79,8 +79,7 @@ def save_model(pipeline,subj,sess):
     return directory
 
 def model(subj,sess,X_train,Y_train,X_test,Y_test):
-    run_onsets= create_run_on_set(subj[0],sess)
-    run_onsets= create_run_on_set(subj[0],sess)
+    run_onsets= create_run_on_set(subj,sess)
     n_samples_train = X_train.shape[0]
     cv = generate_leave_one_run_out(n_samples_train, run_onsets)
     cv = check_cv(cv)  # copy the cross-validation splitter into a reusable list
@@ -257,7 +256,7 @@ if __name__ == "__main__":
 
     if savemodel == True:
 
-        pipeline,scores_train,scores_test,alphas,backend = model(subject,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
+        pipeline,scores_train,scores_test,alphas,backend = model(subjs,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
         dir = save_model(pipeline,subjs,sess)
         print(f"Model saved in {dir}")
         save_predict(pipeline,X_train_concat,Y_test_concat,dir)
@@ -268,7 +267,7 @@ if __name__ == "__main__":
         #save_cortex("Test Data",subjs,scores_test,dir)
         plot_alphas(backend,dir,alphas)
 
-    elif check_file(os.path.join(RESULTS_DATA_DIR,subject,subjs,'semantic_model',subjs+"_"+sess+'Semantic_model.pkl')):
+    elif check_file(os.path.join(RESULTS_DATA_DIR,subjs,sess,'semantic_model',subjs+"_"+sess+'Semantic_model.pkl')):
         print("Loading existing model...")
         pipeline,dir,backend = load_model(subjs,sess)
         scores_train = pipeline.score(X_train_concat,Y_train_concat)
@@ -279,6 +278,6 @@ if __name__ == "__main__":
 
     else:
 
-        pipeline,scores_train,scores_test,alphas = model(subject,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
+        pipeline,scores_train,scores_test,alphas = model(subjs,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
 
 
