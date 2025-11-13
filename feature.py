@@ -127,8 +127,7 @@ if __name__ == "__main__":
 
 	args = parser.parse_args()
 	globals().update(args.__dict__)
-
-	assert np.amax(subject) <= 2 and np.amin(subject) >=1, "1 <= session <= 2"
+	assert len(subject) <= 2 and len(subject) >=1, "1 <= subjects <= 2"
 	subject = list(map(str, subject))
 	sessions = list(map(str, sessions))
 	s = '_'.join(sessions)
@@ -139,7 +138,6 @@ if __name__ == "__main__":
 	else:
 		remove = None
 		save_location = os.path.join(REPO_DIR, "feature",feature, subject[0],s)
-		#subjects = subject[0]
 
 	os.makedirs(save_location, exist_ok=True)
 
@@ -164,10 +162,10 @@ if __name__ == "__main__":
 	# Response
 	if remove is not None:
 		zRresp,run_on_set = get_response(train_stories, subject[0],remove=remove)
-		zRresp_2,run_on_set = get_response(train_stories,run_on_set, subject[1],remove=remove)
+		zRresp_2,run_on_set = get_response(train_stories, subject[1],run_on_set,remove=remove)
 		run_on_set = run_on_set[:-1]
 	else:
-		zRresp,run_on_set = get_response(train_stories, subject)[0]
+		zRresp,run_on_set = get_response(train_stories, subject[0])
 	print("zRresp: ", zRresp.shape)
 	print("length of run_on_set:", len(run_on_set), "with values:", run_on_set)
 

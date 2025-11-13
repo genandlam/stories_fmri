@@ -38,6 +38,8 @@ def check_file(file):
         return True
     
 def check_mean_sf(X_train,X_test):
+    X_test = np.nan_to_num(X_train)
+    X_test = np.nan_to_num(X_test)
     if np.mean(X_train) >0.0001 or np.std(X_train) >1.0001:
         print("train are not standardized properly.")
         X_train= zscore(np.array(X_train, dtype=float))
@@ -73,7 +75,6 @@ def model(subj,sess,X_train,Y_train,X_test,Y_test):
     alphas = np.logspace(1, 20, 20)
     backend = set_backend("torch_cuda", on_error="warn")
     print(backend)
-
     pipeline = make_pipeline(
     StandardScaler(with_mean=True, with_std=False),
     Delayer(delays=[1, 2, 3, 4]),
@@ -85,15 +86,18 @@ def model(subj,sess,X_train,Y_train,X_test,Y_test):
     _ = pipeline.fit(X_train, Y_train)
 
     scores_train = pipeline.score(X_train,Y_train)
+    scores_train = backend.to_numpy(scores_train)
+    print(scores_train)
     print("(n_voxels train,) =", scores_train.shape)
     scores_test = pipeline.score(X_test, Y_test)
+    scores_test = backend.to_numpy(scores_test)
     print("(n_voxels test,) =", scores_test.shape)
 
     return pipeline,scores_train,scores_test,alphas,backend
 
     
 def save_histogram(title,scores_train,dir):
-    plt.hist(scores_train.cpu().numpy(), bins=50, log=True)
+    plt.hist(scores_train , bins=50, log=True)
     plt.title("Histogram of "+title+" R-squared values")
     plt.ylabel("Frequency")
     plt.xlabel("R-squared")
@@ -101,15 +105,16 @@ def save_histogram(title,scores_train,dir):
     plt.savefig(dir+'/'+title+'_histogram.png')
 
 def save_scores(scores_train,scores_test,dir):
-    np.savetxt(dir+'/scores_train.txt', scores_train.cpu().numpy())
-    np.savetxt(dir+'/scores_test.txt', scores_test.cpu().numpy())
+
+    np.save(os.path.join(dir,'scores_train'), scores_train )
+    np.save(os.path.join(dir,'scores_test'), scores_test )
     
 def save_predict(pipeline,X_train,X_test,dir):
 
     train_predict=pipeline.predict(X_train)
     test_predict=pipeline.predict(X_test)
-    np.save(os.path.join(dir,'train_predict'), train_predict.cpu().numpy())
-    np.save(os.path.join(dir,'test_predict'), test_predict.cpu().numpy())    
+    np.save(os.path.join(dir,'train_predict'), train_predict )
+    np.save(os.path.join(dir,'test_predict'), test_predict )    
 
 def load_model(subj,sess):
     Backend = set_backend("torch_cuda", on_error="warn")
@@ -133,7 +138,7 @@ def save_cortex(title,subj,scores,dir):
     subject = subj.split('-')[1]
     xfm = subject+'_auto'
     # First create example voxel data for this subject and transform
-    voxel_data = scores.cpu().numpy()
+    voxel_data = scores 
     voxel_vol = cortex.Volume(voxel_data, subject, xfm,cmap="inferno")
 
     # Then we have to get a mapper from voxels to vertices for this transform
@@ -175,7 +180,7 @@ def plot_RGB(scores_test,pipeline,subj,dir,backend):
     print("(n_delays * n_features, n_voxels) =", primal_coef.shape)
 
     primal_coef /= np.linalg.norm(primal_coef, axis=0)[None]
-    primal_coef *= np.sqrt(np.maximum(0, scores_test.cpu().numpy()))[None]
+    primal_coef *= np.sqrt(np.maximum(0, scores_test ))[None]
 
     # split the ridge coefficients per delays
     delayer = pipeline.named_steps['delayer']

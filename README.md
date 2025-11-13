@@ -24,9 +24,13 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
     $ python feature.py --subject sub-UTS03 --feature eng1000 --sessions 1
     ```
-4. Features space 
+4. Semantic model
     ```
-    $ python semantic_model.py --subject sub-UTS03 --feature eng1000 --sessions 1 --savemodel False
+    $ python semantic_model.py --subject sub-UTS03 --sessions 1 --savemodel False
+    ```
+5. Converter model
+    ```
+    $ python converter.py --subject sub-UTS01 sub-UTS03 --sessions 1 --savemodel False
     ```
 
 ## Usage

@@ -19,9 +19,9 @@ from voxelwise_tutorials.wordnet import scale_to_rgb_cube
 from utils.SemanticModel import SemanticModel
 
 
-def open_json(subj,sess,file):
+def open_json(subj,sess,file,dir=FEATURE_DATA_DIR):
     
-    with open(os.path.join(FEATURE_DATA_DIR,subj,sess,file), "r")  as f:
+    with open(os.path.join(dir,subj,sess,file), "r")  as f:
         data = json.load(f)
     print(f"Loaded {file} with shape: ", np.array(data).shape)
     return  np.array(data, dtype=float)
@@ -38,6 +38,9 @@ def check_file(file):
         return True
     
 def check_mean_sf(X_train,X_test):
+
+    X_test = np.nan_to_num(X_train)
+    X_test = np.nan_to_num(X_test)
 
     if np.mean(X_train) >0.0001 or np.std(X_train) >1.0001:
         print("train are not standardized properly.")
@@ -57,7 +60,7 @@ def select_voxels(subj,sess,threshold):
     X_test = open_json(subj,sess,'features_test.json')
     X_train,X_test=check_mean_sf(X_train,X_test)
 
-    scores_train = open_json(subj,sess,'scores_train.npy')
+    scores_train = open_json(subj,sess,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
     best_voxels = np.argsort(scores_train)[::-1][:threshold]
 
     print("(n_samples_train, n_features) =", X_train[:, best_voxels].shape)
@@ -100,15 +103,17 @@ def model(subj,sess,X_train,Y_train,X_test,Y_test):
     _ = pipeline.fit(X_train, Y_train)
 
     scores_train = pipeline.score(X_train,Y_train)
+    scores_train = backend.to_numpy(scores_train)
     print("(n_voxels train,) =", scores_train.shape)
     scores_test = pipeline.score(X_test, Y_test)
+    scores_test = backend.to_numpy(scores_test)
     print("(n_voxels test,) =", scores_test.shape)
 
     return pipeline,scores_train,scores_test,alphas,backend
 
     
 def save_histogram(title,scores_train,dir):
-    plt.hist(scores_train.cpu().numpy(), bins=50, log=True)
+    plt.hist(scores_train , bins=50, log=True)
     plt.title("Histogram of "+title+" R-squared values")
     plt.ylabel("Frequency")
     plt.xlabel("R-squared")
@@ -116,15 +121,15 @@ def save_histogram(title,scores_train,dir):
     plt.savefig(dir+'/'+title+'_histogram.png')
 
 def save_scores(scores_train,scores_test,dir):
-    np.savetxt(dir+'/scores_train.txt', scores_train.cpu().numpy())
-    np.savetxt(dir+'/scores_test.txt', scores_test.cpu().numpy())
+    np.savetxt(dir+'/scores_train.txt', scores_train )
+    np.savetxt(dir+'/scores_test.txt', scores_test )
     
 def save_predict(pipeline,X_train,X_test,dir):
 
     train_predict=pipeline.predict(X_train)
     test_predict=pipeline.predict(X_test)
-    np.save(os.path.join(dir,'train_predict'), train_predict.cpu().numpy())
-    np.save(os.path.join(dir,'test_predict'), test_predict.cpu().numpy())    
+    np.save(os.path.join(dir,'train_predict'), train_predict )
+    np.save(os.path.join(dir,'test_predict'), test_predict )    
 
 def load_model(subj,sess):
     Backend = set_backend("torch_cuda", on_error="warn")
@@ -148,7 +153,7 @@ def save_cortex(title,subj,scores,dir):
     subject = subj.split('-')[1]
     xfm = subject+'_auto'
     # First create example voxel data for this subject and transform
-    voxel_data = scores.cpu().numpy()
+    voxel_data = scores 
     voxel_vol = cortex.Volume(voxel_data, subject, xfm,cmap="inferno")
 
     # Then we have to get a mapper from voxels to vertices for this transform
@@ -190,7 +195,7 @@ def plot_RGB(scores_test,pipeline,subj,dir,backend):
     print("(n_delays * n_features, n_voxels) =", primal_coef.shape)
 
     primal_coef /= np.linalg.norm(primal_coef, axis=0)[None]
-    primal_coef *= np.sqrt(np.maximum(0, scores_test.cpu().numpy()))[None]
+    primal_coef *= np.sqrt(np.maximum(0, scores_test ))[None]
 
     # split the ridge coefficients per delays
     delayer = pipeline.named_steps['delayer']
@@ -236,11 +241,10 @@ if __name__ == "__main__":
     parser.add_argument("--savemodel", type=bool, default=False)
     parser.add_argument("--threshold", type=int, default=1000)
     logging.basicConfig(level=logging.INFO)
-	
-    assert np.amax(subject) <= 2 and np.amin(subject) >=1, "1 <= session <= 2"
-    
     args = parser.parse_args()
     globals().update(args.__dict__)
+
+    assert len(subject) <= 2 and len(subject) >=1, "1 <= subjects <= 2"
     sessions = list(map(str, sessions))
     subject = list(map(str, subject))
     sess = '_'.join(sessions)
@@ -267,8 +271,8 @@ if __name__ == "__main__":
         save_scores(scores_train,scores_test,dir)
         save_histogram("Train Data",scores_train,dir)
         save_histogram("Test Data",scores_test,dir)
-        #save_cortex("Train Data",subjs,scores_train,dir)
-        #save_cortex("Test Data",subjs,scores_test,dir)
+        save_cortex("Train Data",subjs,scores_train,dir)
+        save_cortex("Test Data",subjs,scores_test,dir)
         plot_alphas(backend,dir,alphas)
 
     elif check_file(os.path.join(RESULTS_DATA_DIR,subjs,sess,'semantic_model',subjs+"_"+sess+'Semantic_model.pkl')):
@@ -278,7 +282,7 @@ if __name__ == "__main__":
         print("(n_voxels train,) =", scores_train.shape)
         scores_test = pipeline.score(X_test_concat,Y_test_concat)
         print("(n_voxels test,) =", scores_test.shape)
-        plot_RGB(scores_test,pipeline,subjs,dir,backend)
+        #plot_RGB(scores_test,pipeline,subjs,dir,backend)
 
     else:
 
