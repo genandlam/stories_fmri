@@ -38,7 +38,8 @@ def check_file(file):
         return True
     
 def check_mean_sf(X_train,X_test):
-    X_test = np.nan_to_num(X_train)
+
+    X_train = np.nan_to_num(X_train)
     X_test = np.nan_to_num(X_test)
     if np.mean(X_train) >0.0001 or np.std(X_train) >1.0001:
         print("train are not standardized properly.")
@@ -63,6 +64,9 @@ def save_model(pipeline,subj,sess):
     file_name = subj+"_"+sess+'Semantic_model.pkl'
     directory=os.path.join(RESULTS_DATA_DIR,subj,sess,'semantic_model')
     check_dir(directory)
+    if check_file(os.path.join(directory,file_name)):
+        file_name = subj+"_"+sess+'Semantic_model_1.pkl'
+        
     joblib.dump(pipeline, os.path.join(directory,file_name), compress=True) 
     return directory
 
@@ -71,7 +75,7 @@ def model(subj,sess,X_train,Y_train,X_test,Y_test):
     n_samples_train = X_train.shape[0]
     cv = generate_leave_one_run_out(n_samples_train, run_onsets)
     cv = check_cv(cv)  # copy the cross-validation splitter into a reusable list
-    X_train= X_train.astype("float32")
+    #X_train= X_train.astype("float32")
     alphas = np.logspace(1, 20, 20)
     backend = set_backend("torch_cuda", on_error="warn")
     print(backend)
@@ -87,7 +91,6 @@ def model(subj,sess,X_train,Y_train,X_test,Y_test):
 
     scores_train = pipeline.score(X_train,Y_train)
     scores_train = backend.to_numpy(scores_train)
-    print(scores_train)
     print("(n_voxels train,) =", scores_train.shape)
     scores_test = pipeline.score(X_test, Y_test)
     scores_test = backend.to_numpy(scores_test)
@@ -105,14 +108,16 @@ def save_histogram(title,scores_train,dir):
     plt.savefig(dir+'/'+title+'_histogram.png')
 
 def save_scores(scores_train,scores_test,dir):
-
+    print("score saving:", scores_train)
+    #np.save('data/temp/np_save', a)
     np.save(os.path.join(dir,'scores_train'), scores_train )
     np.save(os.path.join(dir,'scores_test'), scores_test )
     
 def save_predict(pipeline,X_train,X_test,dir):
-
+    
     train_predict=pipeline.predict(X_train)
     test_predict=pipeline.predict(X_test)
+    print("saving predictions...",train_predict )
     np.save(os.path.join(dir,'train_predict'), train_predict )
     np.save(os.path.join(dir,'test_predict'), test_predict )    
 
@@ -121,8 +126,6 @@ def load_model(subj,sess):
     print(Backend)
     file_name = subj+"_"+sess+'Semantic_model.pkl'
     directory=os.path.join(RESULTS_DATA_DIR,subj,sess,'semantic_model')
-    if check_file(os.path.join(directory,file_name)):
-        file_name = subj+"_"+sess+'Semantic_model_1.pkl'
     pipeline= joblib.load(os.path.join(directory,file_name)) 
     return pipeline,directory,Backend
 
@@ -233,7 +236,6 @@ if __name__ == "__main__":
     sessions = list(map(str, sessions))
     sess = '_'.join(sessions)
 
-
     X_train = open_json(subject,sess,'features_train.json')
     X_test = open_json(subject,sess,'features_test.json')
     print("(n_samples_train, n_features) =", X_train.shape)
@@ -249,6 +251,7 @@ if __name__ == "__main__":
     if savemodel == True:
 
         pipeline,scores_train,scores_test,alphas,backend = model(subject,sess,X_train,Y_train,X_test,Y_test)
+        print("model outputs to main:", scores_train)
         dir = save_model(pipeline,subject,sess)
         print(f"Model saved in {dir}")
         save_predict(pipeline,X_train,X_test,dir)
@@ -258,7 +261,7 @@ if __name__ == "__main__":
         save_cortex("Train Data",subject,scores_train,dir)
         save_cortex("Test Data",subject,scores_test,dir)
         plot_alphas(backend,dir,alphas)
-
+ 
         
 
     elif check_file(os.path.join(RESULTS_DATA_DIR,subject,sess,'semantic_model',subject+"_"+sess+'Semantic_model.pkl')):
@@ -266,13 +269,15 @@ if __name__ == "__main__":
         pipeline,dir,backend = load_model(subject,sess)
         scores_train = pipeline.score(X_train,Y_train)
         print("(n_voxels train,) =", scores_train.shape)
-        scores_test = pipeline.score(X_test, Y_test)
+        scores_test = pipeline.score(X_test.np.cpu(), Y_test.cpu())
         print("(n_voxels test,) =", scores_test.shape)
-        plot_RGB(scores_test,pipeline,subject,dir,backend)
+        #plot_RGB(scores_test,pipeline,subject,dir,backend)
 
     else:
 
-        pipeline,scores_train,scores_test,alphas = model(subject,sess,X_train,Y_train,X_test,Y_test)
+        pipeline,scores_train,scores_test,alphas,backend = model(subject,sess,X_train,Y_train,X_test,Y_test)
+        print(pipeline.predict(X_train))
+        print(pipeline.predict(X_test))
     
 
         

@@ -20,12 +20,18 @@ from utils.SemanticModel import SemanticModel
 
 
 def open_json(subj,sess,file,dir=FEATURE_DATA_DIR):
-    
+    print(os.path.join(dir,subj,sess,file))
     with open(os.path.join(dir,subj,sess,file), "r")  as f:
         data = json.load(f)
     print(f"Loaded {file} with shape: ", np.array(data).shape)
     return  np.array(data, dtype=float)
 
+def open_npy(subj,sess,file,dir=RESULTS_DATA_DIR):
+    
+    data = np.load(os.path.join(dir,subj,sess,file))
+    
+    print(f"Loaded {file} with shape: ", data.shape)
+    return data
 
 def check_dir(directory):
     if not os.path.exists(directory):
@@ -39,7 +45,7 @@ def check_file(file):
     
 def check_mean_sf(X_train,X_test):
 
-    X_test = np.nan_to_num(X_train)
+    X_train = np.nan_to_num(X_train)
     X_test = np.nan_to_num(X_test)
 
     if np.mean(X_train) >0.0001 or np.std(X_train) >1.0001:
@@ -56,11 +62,12 @@ def check_mean_sf(X_train,X_test):
 
 def select_voxels(subj,sess,threshold):
 
-    X_train = open_json(subj,sess,'features_train.json')
-    X_test = open_json(subj,sess,'features_test.json')
+    X_train = open_json(subj,sess,'fmri_train.json')
+    X_test = open_npy(subj,sess,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
+
     X_train,X_test=check_mean_sf(X_train,X_test)
 
-    scores_train = open_json(subj,sess,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
+    scores_train = open_npy(subj,sess,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
     best_voxels = np.argsort(scores_train)[::-1][:threshold]
 
     print("(n_samples_train, n_features) =", X_train[:, best_voxels].shape)
@@ -68,10 +75,13 @@ def select_voxels(subj,sess,threshold):
 
     return X_train[:, best_voxels],X_test[:, best_voxels]
 
+    best_voxels = np.argsort(scores_train)[::-1][:10000]
+    X_train_best = X_train[:, best_voxels]
+
 def create_run_on_set(subj,sess):
+
     run_onsets=open_json(subj,sess,'run_on.json')
     run_onsets=list(map(int, run_onsets))
-    print(len(run_onsets))
     return run_onsets
 
 def save_model(pipeline,subj,sess):
@@ -79,13 +89,18 @@ def save_model(pipeline,subj,sess):
     file_name = subj+"_"+sess+'Semantic_model.pkl'
     directory=os.path.join(RESULTS_DATA_DIR,subj,sess,'semantic_model')
     check_dir(directory)
+    if check_file(os.path.join(directory,file_name)):
+        file_name = subj+"_"+sess+'Semantic_model_1.pkl'
     joblib.dump(pipeline, os.path.join(directory,file_name), compress=True) 
     return directory
 
 def model(subj,sess,X_train,Y_train,X_test,Y_test):
+
     run_onsets= create_run_on_set(subj,sess)
     n_samples_train = X_train.shape[0]
+    print("Number of training samples:", run_onsets)
     cv = generate_leave_one_run_out(n_samples_train, run_onsets)
+    print("Number of CV splits:", cv)
     cv = check_cv(cv)  # copy the cross-validation splitter into a reusable list
     X_train= X_train.astype("float32")
     alphas = np.logspace(1, 20, 20)
@@ -132,12 +147,11 @@ def save_predict(pipeline,X_train,X_test,dir):
     np.save(os.path.join(dir,'test_predict'), test_predict )    
 
 def load_model(subj,sess):
+
     Backend = set_backend("torch_cuda", on_error="warn")
     print(Backend)
     file_name = subj+"_"+sess+'Semantic_model.pkl'
     directory=os.path.join(RESULTS_DATA_DIR,subj,sess,'semantic_model')
-    if check_file(os.path.join(directory,file_name)):
-        file_name = subj+"_"+sess+'Semantic_model_1.pkl'
     pipeline= joblib.load(os.path.join(directory,file_name)) 
     return pipeline,directory,Backend
 
@@ -237,6 +251,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--subject",  nargs='+', type=str, required=True)
+    parser.add_argument("--target", type=str, required=True)
     parser.add_argument("--sessions", nargs='+', type=str, default=["temp"])
     parser.add_argument("--savemodel", type=bool, default=False)
     parser.add_argument("--threshold", type=int, default=1000)
@@ -256,8 +271,8 @@ if __name__ == "__main__":
     X_train_concat = np.concatenate([X_train_best, X_train_best_2], axis=0)
     X_test_concat = np.concatenate([X_test_best, X_test_best_2], axis=0)
 
-    Y_train = open_json(subject[2],'fmri_train.json')
-    Y_test= open_json(subject_2,'fmri_test.json')
+    Y_train = open_json(target,sess,'fmri_train.json')
+    Y_test = open_json(target,sess,'fmri_test.json')
     Y_train,Y_test=check_mean_sf(Y_train,Y_test)
     Y_train_concat = np.concatenate([Y_train, Y_train], axis=0)
     Y_test_concat = np.concatenate([Y_test, Y_test], axis=0)
@@ -282,10 +297,11 @@ if __name__ == "__main__":
         print("(n_voxels train,) =", scores_train.shape)
         scores_test = pipeline.score(X_test_concat,Y_test_concat)
         print("(n_voxels test,) =", scores_test.shape)
-        #plot_RGB(scores_test,pipeline,subjs,dir,backend)
+        plot_RGB(scores_test,pipeline,subjs,dir,backend)
 
     else:
 
-        pipeline,scores_train,scores_test,alphas = model(subjs,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
-
+        pipeline,scores_train,scores_test,alphas,backend  = model(subjs,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
+        print(pipeline.predict(X_train))
+        print(pipeline.predict(X_test))
 
