@@ -102,7 +102,7 @@ def get_response(stories, subject,run_on_set=None,remove=None):
 	base = subject_dir
 	resp = []
 	if run_on_set is None:
-		run_on_set = []
+		run_on_set = [0]
 	for story in stories:
 		resp_path = os.path.join(base, "%s.hf5" % story)
 		hf = h5py.File(resp_path, "r")

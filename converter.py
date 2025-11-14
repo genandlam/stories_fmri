@@ -56,7 +56,7 @@ def check_mean_sf(X_train,X_test):
         print("Warning: test are not standardized properly.")
         X_test= zscore(np.array(X_test, dtype=float))
         print("Mean of new test :",np.mean(X_test))
-        print("Standard deviation new test): ",np.std(X_test))
+        print("Standard deviation new test: ",np.std(X_test))
 
     return X_train,X_test
 
@@ -84,24 +84,26 @@ def create_run_on_set(subj,sess):
     run_onsets=list(map(int, run_onsets))
     return run_onsets
 
-def save_model(pipeline,subj,sess):
+def save_model(pipeline,subj,sess,target,model):
 
-    file_name = subj+"_"+sess+'Semantic_model.pkl'
-    directory=os.path.join(RESULTS_DATA_DIR,subj,sess,'semantic_model')
+    file_name = subj+"_"+target+'_'+sess+model+'_model.pkl'
+    directory=os.path.join(RESULTS_DATA_DIR,subj,sess+'_'+target,model+'_model')
     check_dir(directory)
     if check_file(os.path.join(directory,file_name)):
-        file_name = subj+"_"+sess+'Semantic_model_1.pkl'
+        file_name = subj+"_"+target+'_'+sess+model+'_model_1.pkl'
     joblib.dump(pipeline, os.path.join(directory,file_name), compress=True) 
     return directory
 
-def model(subj,sess,X_train,Y_train,X_test,Y_test):
-
+def train_model(subj,sess,X_train,Y_train,X_test,Y_test):
     run_onsets= create_run_on_set(subj,sess)
-    n_samples_train = X_train.shape[0]
-    print("Number of training samples:", run_onsets)
-    cv = generate_leave_one_run_out(n_samples_train, run_onsets)
-    print("Number of CV splits:", cv)
-    cv = check_cv(cv)  # copy the cross-validation splitter into a reusable list
+    if len(run_onsets) > 1 : 
+        n_samples_train = X_train.shape[0]
+        cv = generate_leave_one_run_out(n_samples_train, run_onsets)
+        cv = check_cv(cv)  # copy the cross-validation splitter into a reusable list
+    else:
+        cv = None
+        print(" 1 run only - defaulting to no cv")
+
     X_train= X_train.astype("float32")
     alphas = np.logspace(1, 20, 20)
     backend = set_backend("torch_cuda", on_error="warn")
@@ -136,8 +138,9 @@ def save_histogram(title,scores_train,dir):
     plt.savefig(dir+'/'+title+'_histogram.png')
 
 def save_scores(scores_train,scores_test,dir):
-    np.savetxt(dir+'/scores_train.txt', scores_train )
-    np.savetxt(dir+'/scores_test.txt', scores_test )
+    print("score saving:", scores_train)
+    np.save(os.path.join(dir,'scores_train'), scores_train )
+    np.save(os.path.join(dir,'scores_test'), scores_test )
     
 def save_predict(pipeline,X_train,X_test,dir):
 
@@ -146,12 +149,12 @@ def save_predict(pipeline,X_train,X_test,dir):
     np.save(os.path.join(dir,'train_predict'), train_predict )
     np.save(os.path.join(dir,'test_predict'), test_predict )    
 
-def load_model(subj,sess):
+def load_model(subj,sess,target,model):
 
     Backend = set_backend("torch_cuda", on_error="warn")
     print(Backend)
-    file_name = subj+"_"+sess+'Semantic_model.pkl'
-    directory=os.path.join(RESULTS_DATA_DIR,subj,sess,'semantic_model')
+    file_name = subj+"_"+target+'_'+sess+model+'_model.pkl'
+    directory=os.path.join(RESULTS_DATA_DIR,subj,sess+'_'+target,model+'_model')
     pipeline= joblib.load(os.path.join(directory,file_name)) 
     return pipeline,directory,Backend
 
@@ -253,6 +256,7 @@ if __name__ == "__main__":
     parser.add_argument("--subject",  nargs='+', type=str, required=True)
     parser.add_argument("--target", type=str, required=True)
     parser.add_argument("--sessions", nargs='+', type=str, default=["temp"])
+    parser.add_argument("--model", choices=['converter', 'converted'], required=True, help='Select model type.')
     parser.add_argument("--savemodel", type=bool, default=False)
     parser.add_argument("--threshold", type=int, default=1000)
     logging.basicConfig(level=logging.INFO)
@@ -279,29 +283,30 @@ if __name__ == "__main__":
 
     if savemodel == True:
 
-        pipeline,scores_train,scores_test,alphas,backend = model(subjs,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
-        dir = save_model(pipeline,subjs,sess)
+        pipeline,scores_train,scores_test,alphas,backend = train_model(subjs,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
+        dir = save_model(pipeline,subjs,sess,target,model)
         print(f"Model saved in {dir}")
-        save_predict(pipeline,X_train_concat,Y_test_concat,dir)
+        save_predict(pipeline,X_train_concat,X_test_concat,dir)
         save_scores(scores_train,scores_test,dir)
         save_histogram("Train Data",scores_train,dir)
         save_histogram("Test Data",scores_test,dir)
-        save_cortex("Train Data",subjs,scores_train,dir)
-        save_cortex("Test Data",subjs,scores_test,dir)
+        save_cortex("Train Data",target,scores_train,dir)
+        save_cortex("Test Data",target,scores_test,dir)
         plot_alphas(backend,dir,alphas)
+        plot_RGB(scores_test,pipeline,target,dir,backend)
 
-    elif check_file(os.path.join(RESULTS_DATA_DIR,subjs,sess,'semantic_model',subjs+"_"+sess+'Semantic_model.pkl')):
+    elif check_file(os.path.join(RESULTS_DATA_DIR,subjs,sess,model+'_model',subjs+"_"+sess+model+'_model.pkl')):
         print("Loading existing model...")
-        pipeline,dir,backend = load_model(subjs,sess)
+        pipeline,dir,backend = load_model(subjs,sess,target,model)
         scores_train = pipeline.score(X_train_concat,Y_train_concat)
         print("(n_voxels train,) =", scores_train.shape)
         scores_test = pipeline.score(X_test_concat,Y_test_concat)
         print("(n_voxels test,) =", scores_test.shape)
-        plot_RGB(scores_test,pipeline,subjs,dir,backend)
+        plot_RGB(scores_test,pipeline,target,dir,backend)
 
     else:
 
         pipeline,scores_train,scores_test,alphas,backend  = model(subjs,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
-        print(pipeline.predict(X_train))
-        print(pipeline.predict(X_test))
+        print(pipeline.predict(X_train_concat))
+        print(pipeline.predict(X_test_concat))
 

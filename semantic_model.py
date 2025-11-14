@@ -54,6 +54,7 @@ def check_mean_sf(X_train,X_test):
     return X_train,X_test
 
 def create_run_on_set(subj,sess):
+
     run_onsets=open_json(subj,sess,'run_on.json')
     run_onsets=list(map(int, run_onsets))
     print(len(run_onsets))
@@ -71,11 +72,15 @@ def save_model(pipeline,subj,sess):
     return directory
 
 def model(subj,sess,X_train,Y_train,X_test,Y_test):
+
     run_onsets= create_run_on_set(subj,sess)
-    n_samples_train = X_train.shape[0]
-    cv = generate_leave_one_run_out(n_samples_train, run_onsets)
-    cv = check_cv(cv)  # copy the cross-validation splitter into a reusable list
-    #X_train= X_train.astype("float32")
+    if len(run_onsets) >1 : 
+        n_samples_train = X_train.shape[0]
+        cv = generate_leave_one_run_out(n_samples_train, run_onsets)
+        cv = check_cv(cv)  # copy the cross-validation splitter into a reusable list
+    else:
+        cv = None
+        print(" 1 run only - defaulting to no cv")
     alphas = np.logspace(1, 20, 20)
     backend = set_backend("torch_cuda", on_error="warn")
     print(backend)
@@ -109,7 +114,6 @@ def save_histogram(title,scores_train,dir):
 
 def save_scores(scores_train,scores_test,dir):
     print("score saving:", scores_train)
-    #np.save('data/temp/np_save', a)
     np.save(os.path.join(dir,'scores_train'), scores_train )
     np.save(os.path.join(dir,'scores_test'), scores_test )
     
@@ -269,7 +273,7 @@ if __name__ == "__main__":
         pipeline,dir,backend = load_model(subject,sess)
         scores_train = pipeline.score(X_train,Y_train)
         print("(n_voxels train,) =", scores_train.shape)
-        scores_test = pipeline.score(X_test.np.cpu(), Y_test.cpu())
+        scores_test = pipeline.score(X_test, Y_test)
         print("(n_voxels test,) =", scores_test.shape)
         #plot_RGB(scores_test,pipeline,subject,dir,backend)
 
