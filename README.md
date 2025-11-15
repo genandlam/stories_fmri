@@ -32,11 +32,7 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
     $ python converter.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1 --model converter --savemodel True
     ```
-
-## Usage
-
-- Run analysis scripts in `run in jupiternotebooks`.
-
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first.
+5. Converted model
+    ```
+    $ python converter.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1 --model converted --savemodel True
+    ```

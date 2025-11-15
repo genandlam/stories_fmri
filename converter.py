@@ -60,11 +60,13 @@ def check_mean_sf(X_train,X_test):
 
     return X_train,X_test
 
-def select_voxels(subj,sess,threshold):
+def select_voxels(subj,sess,threshold,model):
+    if model == "converter":
+        X_train = open_json(subj,sess,'fmri_train.json')
+    elif model == "converted":
+        X_train = open_npy(subj,sess,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
 
-    X_train = open_json(subj,sess,'fmri_train.json')
     X_test = open_npy(subj,sess,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
-
     X_train,X_test=check_mean_sf(X_train,X_test)
 
     scores_train = open_npy(subj,sess,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
@@ -86,8 +88,9 @@ def create_run_on_set(subj,sess):
 
 def save_model(pipeline,subj,sess,target,model):
 
-    file_name = subj+"_"+target+'_'+sess+model+'_model.pkl'
-    directory=os.path.join(RESULTS_DATA_DIR,subj,sess+'_'+target,model+'_model')
+    file_name,directory=get_model_filename_dir(subj,sess,target,model)
+    #file_name = subj+"_"+target+'_'+sess+model+'_model.pkl'
+    #directory=os.path.join(RESULTS_DATA_DIR,subj,sess+'_'+target,model+'_model')
     check_dir(directory)
     if check_file(os.path.join(directory,file_name)):
         file_name = subj+"_"+target+'_'+sess+model+'_model_1.pkl'
@@ -128,7 +131,11 @@ def train_model(subj,sess,X_train,Y_train,X_test,Y_test):
 
     return pipeline,scores_train,scores_test,alphas,backend
 
-    
+def get_model_filename_dir(subj,sess,target,model):
+    file_name = subj+"_"+target+'_'+sess+model+'_model.pkl'
+    directory=os.path.join(RESULTS_DATA_DIR,subj,sess+'_'+target,model+'_model')
+    return file_name,directory
+
 def save_histogram(title,scores_train,dir):
     plt.hist(scores_train , bins=50, log=True)
     plt.title("Histogram of "+title+" R-squared values")
@@ -165,7 +172,7 @@ def set_pycortex_store(filestore):
     cortex.db.reload_subjects()
     print(f"pycortex store set to {filestore}")
 
-def save_cortex(title,subj,scores,dir):
+def save_cortex(title,subj,scores,dir,model):
     set_pycortex_store(os.path.join(DATA_DIR, 'ds003020/derivative/pycortex-db'))
     subject = subj.split('-')[1]
     xfm = subject+'_auto'
@@ -182,7 +189,7 @@ def save_cortex(title,subj,scores,dir):
     # You can plot both as you would normally plot Volume and Vertex data
     cortex.quickshow(voxel_vol, with_rois=False)
     plt.show()
-    plt.savefig(os.path.join(dir,subj+title+'_semantic_model_voxel.png'))
+    plt.savefig(os.path.join(dir,subj+title+'_'+model+'_model_voxel.png'))
 
 def plot_alphas(backend,dir,alphas):
     best_alphas = backend.to_numpy(pipeline[-1].best_alphas_)
@@ -198,44 +205,40 @@ def pca_com(average_coef):
     print("PCA explained variance =", pca.explained_variance_ratio_)
     return components,pca
 
-def print_voxel_words_pca(voxnum,components,):
+def print_voxel_words_pca(voxnum,components):
     # find_words_like_vec returns 10 words most correlated with the given vector, and the correlations
     eng1000 = SemanticModel.load(os.path.join(EM_DATA_DIR, "english1000sm.hf5"))
     voxwords = eng1000.find_words_like_vec(components[voxnum,:])
     print ("Best words for voxel %d :" % (voxnum))
     print(voxwords)
 
-def plot_RGB(scores_test,pipeline,subj,dir,backend):
+def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
 
     primal_coef = pipeline[-1].get_primal_coef()
     primal_coef = backend.to_numpy(primal_coef)
-    print("(n_delays * n_features, n_voxels) =", primal_coef.shape)
-
     primal_coef /= np.linalg.norm(primal_coef, axis=0)[None]
     primal_coef *= np.sqrt(np.maximum(0, scores_test ))[None]
+    print("(n_features, n_voxels) =", primal_coef.shape)
+    file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef'
+    np.save(os.path.join(dir,file_name),primal_coef )
 
-    # split the ridge coefficients per delays
-    delayer = pipeline.named_steps['delayer']
-    primal_coef_per_delay = delayer.reshape_by_delays(primal_coef, axis=0)
-    print("(n_delays, n_features, n_voxels) =", primal_coef_per_delay.shape)
-    del primal_coef
+    return primal_coef
 
-    # average over delays
-    average_coef = np.mean(primal_coef_per_delay, axis=0)
-    print("(n_features, n_voxels) =", average_coef.shape)
-    del primal_coef_per_delay
+def plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess):
 
+    primal_coef=get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess)
+    set_pycortex_store(os.path.join(DATA_DIR, 'ds003020/derivative/pycortex-db'))
     # perform PCA on the voxel coefficients
-    components,pca =pca_com(average_coef)
+    components,pca =pca_com(primal_coef)
     # transform with the fitted PCA
-    average_coef_transformed = pca.transform(average_coef.T).T
+    average_coef_transformed = pca.transform(primal_coef.T).T
     print("(n_components, n_voxels) =", average_coef_transformed.shape)
-    del average_coef
+    del primal_coef
     # We make sure vmin = -vmax, so that the colormap is centered on 0.
     vmax = np.percentile(np.abs(average_coef_transformed), 99.9)
     voxel_colors = scale_to_rgb_cube(average_coef_transformed[1:4].T, clip=3).T
     print("(n_channels, n_voxels) =", voxel_colors.shape)
-    subject = subj.split('-')[1]
+    subject = target.split('-')[1]
     xfm = subject+'_auto'
     # Scaling the three datasets to be between 0-255
     test1_scaled = voxel_colors[0] / np.max(voxel_colors[0]) * 255
@@ -247,10 +250,9 @@ def plot_RGB(scores_test,pipeline,subj,dir,backend):
     vol_data = cortex.VolumeRGB(red, green, blue, subject,vmin=0, vmax=1, vmin2=0, vmax2=1, vmin3=0, vmax3=1)
     cortex.quickshow(vol_data, with_colorbar=False)
     plt.show()
-    plt.savefig(os.path.join(dir,subj+'RGB_semantic_model_voxel.png'))
+    plt.savefig(os.path.join(dir,subjs+'RGB_'+model+'_model_voxel.png'))
 
 if __name__ == "__main__":
-
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--subject",  nargs='+', type=str, required=True)
@@ -269,12 +271,12 @@ if __name__ == "__main__":
     sess = '_'.join(sessions)
     subjs = '_'.join(subject)
 
-    X_train_best,X_test_best= select_voxels(subject[0],sess,threshold)
-    X_train_best_2,X_test_best_2= select_voxels(subject[1],sess,threshold)
+    X_train_best,X_test_best= select_voxels(subject[0],sess,threshold,model)
+    X_train_best_2,X_test_best_2= select_voxels(subject[1],sess,threshold,model)
 
     X_train_concat = np.concatenate([X_train_best, X_train_best_2], axis=0)
     X_test_concat = np.concatenate([X_test_best, X_test_best_2], axis=0)
-
+    
     Y_train = open_json(target,sess,'fmri_train.json')
     Y_test = open_json(target,sess,'fmri_test.json')
     Y_train,Y_test=check_mean_sf(Y_train,Y_test)
@@ -290,23 +292,24 @@ if __name__ == "__main__":
         save_scores(scores_train,scores_test,dir)
         save_histogram("Train Data",scores_train,dir)
         save_histogram("Test Data",scores_test,dir)
-        save_cortex("Train Data",target,scores_train,dir)
-        save_cortex("Test Data",target,scores_test,dir)
+        save_cortex("Train Data",target,scores_train,dir,model)
+        save_cortex("Test Data",target,scores_test,dir,model)
         plot_alphas(backend,dir,alphas)
-        plot_RGB(scores_test,pipeline,target,dir,backend)
+        plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
 
-    elif check_file(os.path.join(RESULTS_DATA_DIR,subjs,sess,model+'_model',subjs+"_"+sess+model+'_model.pkl')):
+    elif check_file(os.path.join(get_model_filename_dir(subjs,sess,target,model)[1],get_model_filename_dir(subjs,sess,target,model)[0])):
         print("Loading existing model...")
         pipeline,dir,backend = load_model(subjs,sess,target,model)
         scores_train = pipeline.score(X_train_concat,Y_train_concat)
         print("(n_voxels train,) =", scores_train.shape)
         scores_test = pipeline.score(X_test_concat,Y_test_concat)
         print("(n_voxels test,) =", scores_test.shape)
-        plot_RGB(scores_test,pipeline,target,dir,backend)
+        scores_test = backend.to_numpy(scores_test)
+        plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
 
     else:
 
-        pipeline,scores_train,scores_test,alphas,backend  = model(subjs,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
+        pipeline,scores_train,scores_test,alphas,backend  = train_model(subjs,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
         print(pipeline.predict(X_train_concat))
         print(pipeline.predict(X_test_concat))
 
