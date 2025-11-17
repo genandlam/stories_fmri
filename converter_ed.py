@@ -1,8 +1,7 @@
-import os,json,cortex
+import os,json,cortex,argparse,logging,joblib
 import numpy as np
 from config.dir import DATA_DIR, EM_DATA_DIR,RESULTS_DATA_DIR,FEATURE_DATA_DIR
 from sklearn.preprocessing import StandardScaler
-from voxelwise_tutorials.delayer import Delayer
 from himalaya.kernel_ridge import KernelRidgeCV
 from himalaya.backend import set_backend
 from sklearn.pipeline import make_pipeline
@@ -10,9 +9,6 @@ from voxelwise_tutorials.utils import generate_leave_one_run_out
 from sklearn.model_selection import check_cv
 import matplotlib.pyplot as plt
 from utils.npp import zscore
-import argparse
-import logging
-import joblib
 from himalaya.viz import plot_alphas_diagnostic
 from sklearn.decomposition import PCA
 from voxelwise_tutorials.wordnet import scale_to_rgb_cube
@@ -261,7 +257,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--subject",  nargs='+', type=str, required=True)
     parser.add_argument("--target", type=str, required=True)
-    parser.add_argument("--sessions", nargs='+', type=str, default=["temp"])
+    parser.add_argument("--sessions", nargs='+', type=str, required=True)
     parser.add_argument("--model", choices=['converter', 'converted'], required=True, help='Select model type.')
     parser.add_argument("--savemodel", type=bool, default=False)
     parser.add_argument("--threshold", type=int, default=1000)
