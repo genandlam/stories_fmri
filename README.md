@@ -20,19 +20,31 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
 2. Install dependencies (see `requirements.txt`).
 
-3. Features space 
+3. Create each session stories
     ```
-    $ python feature.py --subject sub-UTS03 --feature eng1000 --sessions 1
+    $ python create_sess.py --sizeobj 2
+
     ```
-4. Semantic model
+4. Features space 
     ```
-    $ python semantic_model.py --subject sub-UTS03 --sessions 1 --savemodel True
+    $ python feature.py --subject sub-UTS01 --feature eng1000 --sessions 1c --stories 1
     ```
-5. Converter model
+
+5. Semantic model
     ```
-    $ python converter.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1 --model converter --savemodel True
+    $ python semantic_model.py --subject sub-UTS03 --sessions 1a --savemodel True
     ```
-5. Converted model
+6. Converter model
     ```
-    $ python converter.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1 --model converted --savemodel True
+    $ python converter_ed.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converter --savemodel True
+    ```
+7. Converted model
+    ```
+    $ python converter_ed.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converted --savemodel True
+    
+    ```
+8. Compare models
+    ```
+    $ python compare.py 
+    
     ```

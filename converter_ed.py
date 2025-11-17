@@ -136,8 +136,10 @@ def get_model_filename_dir(subj,sess,target,model):
     directory=os.path.join(RESULTS_DATA_DIR,subj,sess+'_'+target,model+'_model')
     return file_name,directory
 
-def save_histogram(title,scores_train,dir):
-    plt.hist(scores_train , bins=50, log=True)
+def save_histogram(title,scores,dir):
+
+    plt.clf()
+    plt.hist(scores , bins=50, log=True)
     plt.title("Histogram of "+title+" R-squared values")
     plt.ylabel("Frequency")
     plt.xlabel("R-squared")
@@ -190,8 +192,10 @@ def save_cortex(title,subj,scores,dir,model):
     cortex.quickshow(voxel_vol, with_rois=False)
     plt.show()
     plt.savefig(os.path.join(dir,subj+title+'_'+model+'_model_voxel.png'))
+    plt.clf()
 
 def plot_alphas(backend,dir,alphas):
+
     best_alphas = backend.to_numpy(pipeline[-1].best_alphas_)
     plot_alphas_diagnostic(best_alphas=best_alphas, alphas=alphas)
     plt.savefig(os.path.join(dir,'alphas_diagnostic.png'))
@@ -304,8 +308,8 @@ if __name__ == "__main__":
         print("(n_voxels train,) =", scores_train.shape)
         scores_test = pipeline.score(X_test_concat,Y_test_concat)
         print("(n_voxels test,) =", scores_test.shape)
-        scores_test = backend.to_numpy(scores_test)
-        plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
+        #scores_test = backend.to_numpy(scores_test)
+        #plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
 
     else:
 

@@ -102,10 +102,11 @@ def model(subj,sess,X_train,Y_train,X_test,Y_test):
     print("(n_voxels test,) =", scores_test.shape)
 
     return pipeline,scores_train,scores_test,alphas,backend
-
     
-def save_histogram(title,scores_train,dir):
-    plt.hist(scores_train , bins=50, log=True)
+def save_histogram(title,scores,dir):
+    
+    plt.clf()
+    plt.hist(scores , bins=50, log=True)
     plt.title("Histogram of "+title+" R-squared values")
     plt.ylabel("Frequency")
     plt.xlabel("R-squared")

@@ -10,7 +10,6 @@ import argparse
 import logging
 
 
-
 def get_story_wordseqs(stories):
 	grids = load_textgrids(stories, DATA_DIR)
 	with open( os.path.join(DATA_DIR, "ds003020/derivative/respdict.json"), "r") as f:
@@ -19,8 +18,6 @@ def get_story_wordseqs(stories):
 	wordseqs = make_word_ds(grids, trfiles)
 	return wordseqs
 
-with open(os.path.join(REPO_DIR,'em_data', "sess_to_story.json"), "r") as f:
-		sess_to_story = json.load(f) 
 
 def downsample_word_vectors(stories, word_vectors, wordseqs):
 	"""Get Lanczos downsampled word_vectors for specified stories.
@@ -122,7 +119,8 @@ if __name__ == "__main__":
 	parser.add_argument("--subject", nargs='+', type=str, required=True)
 	parser.add_argument("--trim", type=int, default=5)
 	parser.add_argument("--feature", type=str, default="eng1000")
-	parser.add_argument("--sessions", nargs='+', type=str, default=["temp"])
+	parser.add_argument("--sessions", nargs='+', type=str, required=True)
+	parser.add_argument("--stories", type=int, default=1)
 	logging.basicConfig(level=logging.INFO)
 
 	args = parser.parse_args()
@@ -141,7 +139,7 @@ if __name__ == "__main__":
 
 	os.makedirs(save_location, exist_ok=True)
 
-	with open(os.path.join(REPO_DIR,'em_data', "sess_to_story.json"), "r") as f:
+	with open(os.path.join(EM_DATA_DIR, f"sess_{stories}.json"), "r") as f:
 		sess_to_story = json.load(f)
 
 	train_stories, test_stories = [], []
