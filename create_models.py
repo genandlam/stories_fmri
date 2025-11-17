@@ -4,6 +4,7 @@ from config.dir import DATA_DIR, EM_DATA_DIR,RESULTS_DATA_DIR,FEATURE_DATA_DIR
 from sklearn.preprocessing import StandardScaler
 from himalaya.kernel_ridge import KernelRidgeCV
 from himalaya.backend import set_backend
+from voxelwise_tutorials.delayer import Delayer
 from sklearn.pipeline import make_pipeline
 from voxelwise_tutorials.utils import generate_leave_one_run_out
 from sklearn.model_selection import check_cv
@@ -23,7 +24,6 @@ def open_json(subj,sess,file,dir=FEATURE_DATA_DIR):
     return  np.array(data, dtype=float)
 
 def open_npy(subj,sess,file,dir=RESULTS_DATA_DIR):
-    
     data = np.load(os.path.join(dir,subj,sess,file))
     print(f"Loaded {file} with shape: ", data.shape)
     return data
@@ -54,6 +54,16 @@ def check_mean_sf(X_train,X_test):
         print("Standard deviation new test: ",np.std(X_test))
 
     return X_train,X_test
+
+def semantic_features(subject,sess):
+        
+        X_train = open_json(subject,sess,'features_train.json')
+        X_test = open_json(subject,sess,'features_test.json')
+
+        print("(n_samples_train, n_features) =", X_train.shape)
+        print("(n_samples_test, n_features) =", X_test.shape)
+        X_train,X_test=check_mean_sf(X_train,X_test)
+        return X_train,X_test
 
 def select_voxels(subj,sess,threshold,model):
 
@@ -88,7 +98,7 @@ def save_model(pipeline,subj,sess,target,model):
     joblib.dump(pipeline, os.path.join(directory,file_name), compress=True) 
     return directory
 
-def train_model(subj,sess,X_train,Y_train,X_test,Y_test):
+def train_model(subj,sess,X_train,Y_train,X_test,Y_test,model):
     run_onsets= create_run_on_set(subj,sess)
     if len(run_onsets) > 1 : 
         n_samples_train = X_train.shape[0]
@@ -97,6 +107,8 @@ def train_model(subj,sess,X_train,Y_train,X_test,Y_test):
     else:
         cv = None
         print(" 1 run only - defaulting to no cv")
+    if model == "sematic":
+        print("Using semantic features ...")
 
     X_train= X_train.astype("float32")
     alphas = np.logspace(1, 20, 20)
@@ -251,7 +263,7 @@ if __name__ == "__main__":
     parser.add_argument("--subject",  nargs='+', type=str, required=True)
     parser.add_argument("--target", type=str, required=True)
     parser.add_argument("--sessions", nargs='+', type=str, required=True)
-    parser.add_argument("--model", choices=['converter', 'converted'], required=True, help='Select model type.')
+    parser.add_argument("--model", choices=['converter', 'converted','semantic'], required=True, help='Select model type.')
     parser.add_argument("--savemodel", type=bool, default=False)
     parser.add_argument("--threshold", type=int, default=1000)
     logging.basicConfig(level=logging.INFO)
@@ -263,25 +275,32 @@ if __name__ == "__main__":
     subject = list(map(str, subject))
     sess = '_'.join(sessions)
     subjs = '_'.join(subject)
-
-    X_train_best,X_test_best= select_voxels(subject[0],sess,threshold,model)
-    X_train_best_2,X_test_best_2= select_voxels(subject[1],sess,threshold,model)
-
-    X_train_concat = np.concatenate([X_train_best, X_train_best_2], axis=0)
-    X_test_concat = np.concatenate([X_test_best, X_test_best_2], axis=0)
     
     Y_train = open_json(target,sess,'fmri_train.json')
     Y_test = open_json(target,sess,'fmri_test.json')
     Y_train,Y_test=check_mean_sf(Y_train,Y_test)
-    Y_train_concat = np.concatenate([Y_train, Y_train], axis=0)
-    Y_test_concat = np.concatenate([Y_test, Y_test], axis=0)
+    
+    if model == "semantic":
+        print("Semantic model selected ...")
+        X_train, X_test = semantic_features(target,sess,threshold)
+
+
+    else:
+        X_train_best,X_test_best= select_voxels(subject[0],sess,threshold,model)
+        X_train_best_2,X_test_best_2= select_voxels(subject[1],sess,threshold,model)
+
+        X_train = np.concatenate([X_train_best, X_train_best_2], axis=0)
+        X_test = np.concatenate([X_test_best, X_test_best_2], axis=0)
+    
+        Y_train = np.concatenate([Y_train, Y_train], axis=0)
+        Y_test = np.concatenate([Y_test, Y_test], axis=0)
 
     if savemodel == True:
 
-        pipeline,scores_train,scores_test,alphas,backend = train_model(subjs,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
+        pipeline,scores_train,scores_test,alphas,backend = train_model(subjs,sess,X_train,Y_train,X_test,Y_test,model)
         dir = save_model(pipeline,subjs,sess,target,model)
         print(f"Model saved in {dir}")
-        save_predict(pipeline,X_train_concat,X_test_concat,dir)
+        save_predict(pipeline,X_train ,X_test ,dir)
         save_scores(scores_train,scores_test,dir)
         save_histogram("Train Data",scores_train,dir)
         save_histogram("Test Data",scores_test,dir)
@@ -293,16 +312,16 @@ if __name__ == "__main__":
     elif check_file(os.path.join(get_model_filename_dir(subjs,sess,target,model)[1],get_model_filename_dir(subjs,sess,target,model)[0])):
         print("Loading existing model...")
         pipeline,dir,backend = load_model(subjs,sess,target,model)
-        scores_train = pipeline.score(X_train_concat,Y_train_concat)
+        scores_train = pipeline.score(X_train ,Y_train )
         print("(n_voxels train,) =", scores_train.shape)
-        scores_test = pipeline.score(X_test_concat,Y_test_concat)
+        scores_test = pipeline.score(X_test ,Y_test )
         print("(n_voxels test,) =", scores_test.shape)
         #scores_test = backend.to_numpy(scores_test)
         #plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
 
     else:
 
-        pipeline,scores_train,scores_test,alphas,backend  = train_model(subjs,sess,X_train_concat,Y_train_concat,X_test_concat,Y_test_concat)
-        print(pipeline.predict(X_train_concat))
-        print(pipeline.predict(X_test_concat))
+        pipeline,scores_train,scores_test,alphas,backend  = train_model(subjs,sess,X_train ,Y_train ,X_test ,Y_test )
+        print(pipeline.predict(X_train ))
+        print(pipeline.predict(X_test ))
 

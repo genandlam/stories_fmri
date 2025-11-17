@@ -11,6 +11,7 @@ This repository contains code and resources related to fMRI data analysis for na
 
 - `/*.ipynb` - Jupyter notebooks for exploratory analysis
 - `/results` - Output results and features
+- `/feature` - Output features
 
 ## Getting Started
 

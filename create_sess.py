@@ -81,12 +81,11 @@ def generate_json_objects(sizeobj):
             # Generate combinations of size 1 (single objects)
             combinations = [[obj] for obj in available_objects]
             
-        
         elif sizeobj >= 2:
         # Generate all combinations of size sizeobj
             combinations = list(itertools.combinations(available_objects, sizeobj))
         
-        # Find valid triplets for 2-object combinations (2a, 2b, 2c)
+        # Find valid triplets for x-object combinations (xa, xb, xc)
         valid_triplets = find_non_subset_triplets(combinations)
         try:
             triplet = valid_triplets[0]  # Take the first valid triplet
