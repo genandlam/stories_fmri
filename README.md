@@ -23,14 +23,12 @@ This repository contains code and resources related to fMRI data analysis for na
 
 3. Create each session stories
     ```
-    $ python create_sess.py --sizeobj 2
-
+    $ python create_sess.py --sizeobj 3
     ```
 4. Features space 
     ```
-    $ python feature.py --subject sub-UTS01 --feature eng1000 --sessions 1c --stories 1
+    $ python feature.py --subject sub-UTS01 --feature eng1000 --sessions 1c 
     ```
-
 5. Semantic model
     ```
     $ python semantic_model.py --subject sub-UTS03 --sessions 1a --savemodel True
@@ -42,10 +40,8 @@ This repository contains code and resources related to fMRI data analysis for na
 7. Converted model
     ```
     $ python converter_ed.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converted --savemodel True
-    
     ```
 8. Compare models
     ```
     $ python compare.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1  --model converted
-    
     ```

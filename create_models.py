@@ -284,7 +284,6 @@ if __name__ == "__main__":
         print("Semantic model selected ...")
         X_train, X_test = semantic_features(target,sess,threshold)
 
-
     else:
         X_train_best,X_test_best= select_voxels(subject[0],sess,threshold,model)
         X_train_best_2,X_test_best_2= select_voxels(subject[1],sess,threshold,model)

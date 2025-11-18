@@ -6,6 +6,8 @@ import sklearn.metrics
 
 
 def load_primal_coef(subjs,sess,target,model):
+    #if subjs == '2':
+    #    file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef.npy'
     file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef.npy'
     directory=os.path.join(RESULTS_DATA_DIR,subjs,sess+'_'+target,model+'_model')
     print(f"Loading {file_name}.npy from {dir}")
@@ -35,12 +37,12 @@ def compute_r(weight, sess):
         corr2= sklearn.metrics.r2_score(w1.ravel(), w2.ravel())
         r.append(corr)
         r2.append(corr2)
-    average_r = float(np.mean(list(r.values())))
-    average_r2 = float(np.mean(list(r2.values())))
+    average_r = float(np.mean(r))
+    average_r2 = float(np.mean(r2))
     
-    return {f'{sess}':average_r}, {f'{sess}':average_r2}
+    return average_r, average_r2
 
-def plot_r(sess_r_values,subjs,target,model):
+def plot_r(sess_r_values,sess,subjs,target,model,name):
     sess_list = list(sess_r_values.keys())
     r_values = list(sess_r_values.values())
     x = np.array(sess_list)  # X-axis 
@@ -48,14 +50,13 @@ def plot_r(sess_r_values,subjs,target,model):
 
     plt.plot(x, y)  
     plt.xlabel('Number of training stories')
-    plt.ylabel('Mean similarities of estimated weights(r)')
+    plt.ylabel(f'Mean similarities of estimated weights({name})')
     #plt.grid(True)
-    directory=os.path.join(RESULTS_DATA_DIR,subjs,target,model+'_model')
+    directory=os.path.join(RESULTS_DATA_DIR,subjs,sess+target,model+'_model')
     if not os.path.exists(directory):
         os.makedirs(directory)
-    plt.savefig(os.path.join(directory,'mean_similarities_weights_r.png'))
+    plt.savefig(os.path.join(directory,f'mean_similarities_weights_{name}.png'))
     plt.close()
-
     
 if __name__ == "__main__":
 
@@ -63,7 +64,7 @@ if __name__ == "__main__":
     parser.add_argument("--subject",  nargs='+', type=str, required=True)
     parser.add_argument("--target", type=str, required=True)
     parser.add_argument("--sessions", nargs='+', type=int, required=True)
-    parser.add_argument("--model", choices=['converter', 'converted'], required=True, help='Select model type.')
+    parser.add_argument("--model", choices=['converter', 'converted','semantic'], required=True, help='Select model type.')
     logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
     globals().update(args.__dict__)
@@ -73,13 +74,21 @@ if __name__ == "__main__":
     subject = list(map(str, subject))
     sess = '_'.join(sessions)
     subjs = '_'.join(subject)
-    primal_coef,dir=load_primal_coef(subjs,sess,target,model)
-    sess_r_values = {}
-    sess_r2_values = {}
-    weight={}
-    for i in ['a','b','c']:
-        primal_coef = load(subjs,f'{sess}{i}',target,model)
-        weight[f'{sess}{i}']=primal_coef
-    r_value,r2_value=compute_r(weight,sess)
-    sess_r_values.update(r_value)
-    sess_r2_values.update(r2_value)
+    dict_r_values ={}
+    dict_r2_values ={}
+    for j in sessions: 
+        #primal_coef,dir=load_primal_coef(subjs,j,target,model)
+        sess_r_values = []
+        sess_r2_values = []
+        weight={}
+        for i in ['a','b','c']:
+            primal_coef=load_primal_coef(subjs,j+i,target,model)
+            weight[f'{j}{i}']=primal_coef
+        r_value,r2_value=compute_r(weight,j)
+        sess_r_values.append(r_value)
+        sess_r2_values.append(r2_value)
+        print("r values of j : ",sess_r_values)
+        dict_r_values[j]=sess_r_values
+        dict_r2_values[j]=sess_r2_values
+    plot_r(dict_r_values,sess,subjs,target,model,"r")
+    plot_r(dict_r2_values,sess,subjs,target,model,"r2")

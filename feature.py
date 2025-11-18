@@ -138,8 +138,7 @@ if __name__ == "__main__":
 		save_location = os.path.join(REPO_DIR, "feature",feature, subject[0],s)
 
 	os.makedirs(save_location, exist_ok=True)
-
-	with open(os.path.join(EM_DATA_DIR, f"sess_{stories}.json"), "r") as f:
+	with open(os.path.join(EM_DATA_DIR, f"sess_{sessions[0][0]}.json"), "r") as f:
 		sess_to_story = json.load(f)
 
 	train_stories, test_stories = [], []
