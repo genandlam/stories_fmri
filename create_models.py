@@ -63,6 +63,7 @@ def semantic_features(subject,sess):
         print("(n_samples_train, n_features) =", X_train.shape)
         print("(n_samples_test, n_features) =", X_test.shape)
         X_train,X_test=check_mean_sf(X_train,X_test)
+
         return X_train,X_test
 
 def select_voxels(subj,sess,threshold,model):
@@ -109,6 +110,7 @@ def train_model(subj,sess,X_train,Y_train,X_test,Y_test,model):
         print(" 1 run only - defaulting to no cv")
     if model == "sematic":
         print("Using semantic features ...")
+        delay= Delayer(delays=[1, 2, 3, 4]),
 
     X_train= X_train.astype("float32")
     alphas = np.logspace(1, 20, 20)
@@ -116,6 +118,7 @@ def train_model(subj,sess,X_train,Y_train,X_test,Y_test,model):
     print(backend)
     pipeline = make_pipeline(
     StandardScaler(with_mean=True, with_std=False),
+    delay,
     KernelRidgeCV(
         alphas=alphas, cv=cv,
         solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
@@ -133,6 +136,9 @@ def train_model(subj,sess,X_train,Y_train,X_test,Y_test,model):
     return pipeline,scores_train,scores_test,alphas,backend
 
 def get_model_filename_dir(subj,sess,target,model):
+    if model == 'semantic':
+        file_name = subj+'_'+sess+model+'_model.pkl'
+        directory=os.path.join(RESULTS_DATA_DIR,subj,sess,model+'_model')
     file_name = subj+"_"+target+'_'+sess+model+'_model.pkl'
     directory=os.path.join(RESULTS_DATA_DIR,subj,sess+'_'+target,model+'_model')
     return file_name,directory
@@ -181,7 +187,7 @@ def save_cortex(title,subj,scores,dir,model):
     xfm = subject+'_auto'
     # First create example voxel data for this subject and transform
     voxel_data = scores 
-    voxel_vol = cortex.Volume(voxel_data, subject, xfm,cmap="inferno")
+    voxel_vol = cortex.Volume(voxel_data, subject, xfm,vmin=0,cmap="inferno")
 
     # Then we have to get a mapper from voxels to vertices for this transform
     mapper = cortex.get_mapper(subject, xfm, 'line_nearest', recache=True)
@@ -281,8 +287,9 @@ if __name__ == "__main__":
     Y_train,Y_test=check_mean_sf(Y_train,Y_test)
     
     if model == "semantic":
+
         print("Semantic model selected ...")
-        X_train, X_test = semantic_features(target,sess,threshold)
+        X_train, X_test = semantic_features(sess,threshold)
 
     else:
         X_train_best,X_test_best= select_voxels(subject[0],sess,threshold,model)

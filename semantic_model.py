@@ -21,7 +21,6 @@ from utils.SemanticModel import SemanticModel
 
 def open_json(subj,sess,file):
     
-    #dir=os.path.join( FEATURE_DATA_DIR,subj)
     with open(os.path.join(FEATURE_DATA_DIR,subj,sess,file), "r")  as f:
         data = json.load(f)
     return  np.array(data, dtype=float)
@@ -71,13 +70,15 @@ def save_model(pipeline,subj,sess):
     joblib.dump(pipeline, os.path.join(directory,file_name), compress=True) 
     return directory
 
-def model(subj,sess,X_train,Y_train,X_test,Y_test):
+def model(subj,sess,X_train,Y_train,X_test,Y_test,delay=None):
 
     run_onsets= create_run_on_set(subj,sess)
     if len(run_onsets) >1 : 
         n_samples_train = X_train.shape[0]
         cv = generate_leave_one_run_out(n_samples_train, run_onsets)
         cv = check_cv(cv)  # copy the cross-validation splitter into a reusable list
+    elif model == 'semantic':
+        delay = Delayer(delays=[1, 2, 3, 4])
     else:
         cv = None
         print(" 1 run only - defaulting to no cv")
@@ -86,7 +87,7 @@ def model(subj,sess,X_train,Y_train,X_test,Y_test):
     print(backend)
     pipeline = make_pipeline(
     StandardScaler(with_mean=True, with_std=False),
-    Delayer(delays=[1, 2, 3, 4]),
+    delay,
     KernelRidgeCV(
         alphas=alphas, cv=cv,
         solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
@@ -147,8 +148,8 @@ def save_cortex(title,subj,scores,dir):
     xfm = subject+'_auto'
     # First create example voxel data for this subject and transform
     voxel_data = scores 
-    voxel_vol = cortex.Volume(voxel_data, subject, xfm,cmap="inferno")
 
+    voxel_vol = cortex.Volume(voxel_data, subject, xfm,vmin=0,cmap="inferno")
     # Then we have to get a mapper from voxels to vertices for this transform
     mapper = cortex.get_mapper(subject, xfm, 'line_nearest', recache=True)
 
@@ -181,14 +182,29 @@ def print_voxel_words_pca(voxnum,components,):
     print ("Best words for voxel %d :" % (voxnum))
     print(voxwords)
 
-def plot_RGB(scores_test,pipeline,subj,dir,backend):
+def get_primal_coef(scores_test,pipeline,dir,backend,model,subjs,sess,):
 
     primal_coef = pipeline[-1].get_primal_coef()
     primal_coef = backend.to_numpy(primal_coef)
-    print("(n_delays * n_features, n_voxels) =", primal_coef.shape)
-
     primal_coef /= np.linalg.norm(primal_coef, axis=0)[None]
     primal_coef *= np.sqrt(np.maximum(0, scores_test ))[None]
+    # split the ridge coefficients per delays
+    delayer = pipeline.named_steps['delayer']
+    primal_coef_per_delay = delayer.reshape_by_delays(primal_coef, axis=0)
+    print("(n_delays, n_features, n_voxels) =", primal_coef_per_delay.shape)
+    # average over delays
+    average_coef = np.mean(primal_coef_per_delay, axis=0)
+    print("(n_features, n_voxels) =", average_coef.shape)
+    del primal_coef_per_delay
+    file_name = subjs+'_'+sess+model+'_primal_coef'
+    np.save(os.path.join(dir,file_name),average_coef)
+
+    return primal_coef
+
+def plot_RGB(scores_test,pipeline,subj,dir,backend):
+
+    primal_coef=get_primal_coef(scores_test,pipeline,dir,backend,'Semantic',subj,sess)
+    set_pycortex_store(os.path.join(DATA_DIR, 'ds003020/derivative/pycortex-db'))
 
     # split the ridge coefficients per delays
     delayer = pipeline.named_steps['delayer']
@@ -226,9 +242,7 @@ def plot_RGB(scores_test,pipeline,subj,dir,backend):
     plt.savefig(os.path.join(dir,subj+'RGB_semantic_model_voxel.png'))
 
 
-
 if __name__ == "__main__":
-
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--subject", type=str, required=True)
@@ -268,7 +282,6 @@ if __name__ == "__main__":
         plot_alphas(backend,dir,alphas)
  
         
-
     elif check_file(os.path.join(RESULTS_DATA_DIR,subject,sess,'semantic_model',subject+"_"+sess+'Semantic_model.pkl')):
         print("Loading existing model...")
         pipeline,dir,backend = load_model(subject,sess)
@@ -276,7 +289,12 @@ if __name__ == "__main__":
         print("(n_voxels train,) =", scores_train.shape)
         scores_test = pipeline.score(X_test, Y_test)
         print("(n_voxels test,) =", scores_test.shape)
+        scores_test = backend.to_numpy(scores_test)
+        scores_train = backend.to_numpy(scores_train)
+        save_cortex("Train Data",target,scores_train,dir,model)
+        save_cortex("Test Data",target,scores_test,dir,model)
         #plot_RGB(scores_test,pipeline,subject,dir,backend)
+
 
     else:
 

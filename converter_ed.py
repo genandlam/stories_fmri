@@ -169,7 +169,7 @@ def save_cortex(title,subj,scores,dir,model):
     xfm = subject+'_auto'
     # First create example voxel data for this subject and transform
     voxel_data = scores 
-    voxel_vol = cortex.Volume(voxel_data, subject, xfm,cmap="inferno")
+    voxel_vol = cortex.Volume(voxel_data, subject, xfm,vmin=0,cmap="inferno")
 
     # Then we have to get a mapper from voxels to vertices for this transform
     mapper = cortex.get_mapper(subject, xfm, 'line_nearest', recache=True)
@@ -209,8 +209,8 @@ def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
 
     primal_coef = pipeline[-1].get_primal_coef()
     primal_coef = backend.to_numpy(primal_coef)
-    primal_coef /= np.linalg.norm(primal_coef, axis=0)[None]
-    primal_coef *= np.sqrt(np.maximum(0, scores_test ))[None]
+    primal_coef /= np.linalg.norm(primal_coef, axis=0)
+    primal_coef *= np.sqrt(np.maximum(0, scores_test ))
     print("(n_features, n_voxels) =", primal_coef.shape)
     file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef'
     np.save(os.path.join(dir,file_name),primal_coef)
@@ -297,8 +297,12 @@ if __name__ == "__main__":
         print("(n_voxels train,) =", scores_train.shape)
         scores_test = pipeline.score(X_test_concat,Y_test_concat)
         print("(n_voxels test,) =", scores_test.shape)
-        #scores_test = backend.to_numpy(scores_test)
-        #plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
+        scores_test = backend.to_numpy(scores_test)
+        scores_train = backend.to_numpy(scores_train)
+
+        save_cortex("Train Data",target,scores_train,dir,model)
+        save_cortex("Test Data",target,scores_test,dir,model)
+        plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
 
     else:
 

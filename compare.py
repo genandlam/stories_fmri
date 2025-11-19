@@ -6,12 +6,16 @@ import sklearn.metrics
 
 
 def load_primal_coef(subjs,sess,target,model):
-    #if subjs == '2':
-    #    file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef.npy'
-    file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef.npy'
-    directory=os.path.join(RESULTS_DATA_DIR,subjs,sess+'_'+target,model+'_model')
+    if subjs == 'sub-UTS02':
+        file_name = subjs+'_'+sess+str.capitalize(model)+'_primal_coef.npy'
+        directory=os.path.join(RESULTS_DATA_DIR,subjs,sess,model+'_model')
+
+    else: 
+        file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef.npy'
+        directory=os.path.join(RESULTS_DATA_DIR,subjs,sess+'_'+target,model+'_model')
+
     print(f"Loading {file_name}.npy from {dir}")
-    primal_coef=np.load(os.path.join(directory,file_name) )
+    primal_coef=np.load(os.path.join(directory,file_name))
     return primal_coef
 
 def compute_r(weight, sess):
@@ -51,7 +55,6 @@ def plot_r(sess_r_values,sess,subjs,target,model,name):
     plt.plot(x, y)  
     plt.xlabel('Number of training stories')
     plt.ylabel(f'Mean similarities of estimated weights({name})')
-    #plt.grid(True)
     directory=os.path.join(RESULTS_DATA_DIR,subjs,sess+target,model+'_model')
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -77,7 +80,7 @@ if __name__ == "__main__":
     dict_r_values ={}
     dict_r2_values ={}
     for j in sessions: 
-        #primal_coef,dir=load_primal_coef(subjs,j,target,model)
+
         sess_r_values = []
         sess_r2_values = []
         weight={}
