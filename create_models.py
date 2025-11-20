@@ -92,6 +92,7 @@ def create_run_on_set(subj,sess):
 
 def save_model(pipeline,subj,sess,target,model):
 
+    
     file_name,directory=get_model_filename_dir(subj,sess,target,model)
     check_dir(directory)
     if check_file(os.path.join(directory,file_name)):
@@ -136,11 +137,13 @@ def train_model(subj,sess,X_train,Y_train,X_test,Y_test,model):
     return pipeline,scores_train,scores_test,alphas,backend
 
 def get_model_filename_dir(subj,sess,target,model):
+    
     if model == 'semantic':
-        file_name = subj+'_'+sess+model+'_model.pkl'
+        file_name = subj+'_'+sess+str.capitalize(model)+'_model.pkl'
         directory=os.path.join(RESULTS_DATA_DIR,subj,sess,model+'_model')
-    file_name = subj+"_"+target+'_'+sess+model+'_model.pkl'
-    directory=os.path.join(RESULTS_DATA_DIR,subj,sess+'_'+target,model+'_model')
+    else:
+        file_name = subj+"_"+target+'_'+sess+model+'_model.pkl'
+        directory=os.path.join(RESULTS_DATA_DIR,subj,sess+'_'+target,model+'_model')
     return file_name,directory
 
 def save_histogram(title,scores,dir):
@@ -169,8 +172,7 @@ def load_model(subj,sess,target,model):
 
     Backend = set_backend("torch_cuda", on_error="warn")
     print(Backend)
-    file_name = subj+"_"+target+'_'+sess+model+'_model.pkl'
-    directory=os.path.join(RESULTS_DATA_DIR,subj,sess+'_'+target,model+'_model')
+    file_name,directory=get_model_filename_dir(subj,sess,target,model)
     pipeline= joblib.load(os.path.join(directory,file_name)) 
     return pipeline,directory,Backend
 
@@ -230,7 +232,17 @@ def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
     primal_coef /= np.linalg.norm(primal_coef, axis=0)[None]
     primal_coef *= np.sqrt(np.maximum(0, scores_test ))[None]
     print("(n_features, n_voxels) =", primal_coef.shape)
-    file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef'
+    if model =='semantic':
+        delayer = pipeline.named_steps['delayer']
+        primal_coef_per_delay = delayer.reshape_by_delays(primal_coef, axis=0)
+        print("(n_delays, n_features, n_voxels) =", primal_coef_per_delay.shape)
+        # average over delays
+        average_coef = np.mean(primal_coef_per_delay, axis=0)
+        print("(n_features, n_voxels) =", average_coef.shape)
+        file_name= file_name = subjs+'_'+sess+model+'_primal_coef'
+        primal_coef= average_coef
+    else:
+        file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef'
     np.save(os.path.join(dir,file_name),primal_coef)
 
     return primal_coef
