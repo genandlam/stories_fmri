@@ -137,7 +137,7 @@ def train_model(subj,sess,X_train,Y_train,X_test,Y_test,model):
     return pipeline,scores_train,scores_test,alphas,backend
 
 def get_model_filename_dir(subj,sess,target,model):
-    
+
     if model == 'semantic':
         file_name = subj+'_'+sess+str.capitalize(model)+'_model.pkl'
         directory=os.path.join(RESULTS_DATA_DIR,subj,sess,model+'_model')
@@ -239,7 +239,7 @@ def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
         # average over delays
         average_coef = np.mean(primal_coef_per_delay, axis=0)
         print("(n_features, n_voxels) =", average_coef.shape)
-        file_name= file_name = subjs+'_'+sess+model+'_primal_coef'
+        file_name= subjs+'_'+sess+model+'_primal_coef'
         primal_coef= average_coef
     else:
         file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef'
@@ -304,6 +304,7 @@ if __name__ == "__main__":
         X_train, X_test = semantic_features(sess,threshold)
 
     else:
+        
         X_train_best,X_test_best= select_voxels(subject[0],sess,threshold,model)
         X_train_best_2,X_test_best_2= select_voxels(subject[1],sess,threshold,model)
 
