@@ -14,7 +14,7 @@ from himalaya.viz import plot_alphas_diagnostic
 from sklearn.decomposition import PCA
 from voxelwise_tutorials.wordnet import scale_to_rgb_cube
 from utils.SemanticModel import SemanticModel
-
+from voxelwise_tutorials.viz import plot_hist2d
 
 def open_json(subj,sess,file,dir=FEATURE_DATA_DIR):
     print(os.path.join(dir,subj,sess,file))
@@ -92,7 +92,6 @@ def create_run_on_set(subj,sess):
 
 def save_model(pipeline,subj,sess,target,model):
 
-    
     file_name,directory=get_model_filename_dir(subj,sess,target,model)
     check_dir(directory)
     if check_file(os.path.join(directory,file_name)):
@@ -109,10 +108,11 @@ def train_model(subj,sess,X_train,Y_train,X_test,Y_test,model):
     else:
         cv = None
         print(" 1 run only - defaulting to no cv")
-    if model == "sematic":
+    if model == "semantic":
         print("Using semantic features ...")
-        delay= Delayer(delays=[1, 2, 3, 4]),
-
+        delay= Delayer(delays=[1, 2, 3, 4])
+    else: delay = None 
+    print (delay)
     X_train= X_train.astype("float32")
     alphas = np.logspace(1, 20, 20)
     backend = set_backend("torch_cuda", on_error="warn")
@@ -159,14 +159,22 @@ def save_histogram(title,scores,dir):
 def save_scores(scores_train,scores_test,dir):
     print("score saving:", scores_train)
     np.save(os.path.join(dir,'scores_train'), scores_train)
-    np.save(os.path.join(dir,'scores_test'), scores_test )
+    np.save(os.path.join(dir,'scores_test'), scores_test)
     
 def save_predict(pipeline,X_train,X_test,dir):
-
     train_predict=pipeline.predict(X_train)
     test_predict=pipeline.predict(X_test)
     np.save(os.path.join(dir,'train_predict'), train_predict )
     np.save(os.path.join(dir,'test_predict'), test_predict )    
+
+def save_rscore(dir,X_train,X_test):
+
+    predict_train=np.load(os.path.join(dir,'train_predict.npy'))
+    predict_test=np.load(os.path.join(dir,'test_predict.npy'))
+    corr_train = np.corrcoef(X_train.ravel(), predict_train.ravel())[0, 1]
+    corr_test = np.corrcoef(X_test.ravel(), predict_test.ravel())[0, 1]
+    np.save(os.path.join(dir,'rscore_train'), corr_train )
+    np.save(os.path.join(dir,'rscore_test'), corr_test ) 
 
 def load_model(subj,sess,target,model):
 
@@ -225,12 +233,35 @@ def print_voxel_words_pca(voxnum,components):
     print ("Best words for voxel %d :" % (voxnum))
     print(voxwords)
 
-def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
+def compare_hist(dir,subjs,model,scores,target):
+    dir1,_=get_model_filename_dir(target,sess,target,'semantic')
+    scores_baseline= np.load(os.path.join(dir1,'scores_test'+'.npy'))
+    ax = plot_hist2d(scores_baseline, scores,vmin=-0.2, vmax=0.4)
+    ax.set(title='Generalization R2 scores', ylabel='Baseline model',
+        xlabel='Transform model')
+    plt.show()
+    plt.savefig(os.path.join(dir,subjs,model+'_model_hist_compare.png'))
 
+def compare_heatmap(dir,subjs,model,scores,target):
+    dir1,_=get_model_filename_dir(target,sess,target,'semantic')
+    scores_baseline= np.load(os.path.join(dir1,'scores_test'+'.npy'))
+    subject = 'UTS02'
+    xfm = 'UTS02_auto'
+    vol_data = cortex.Volume2D(scores_baseline, scores, subject, xfm,
+                            #cmap="GreenWhiteBlue_2D",
+                            vmin=0,vmin2=0, vmax=0.2, vmax2=0.2
+                            )
+    cortex.quickshow(vol_data, with_rois=False )# with_colorbar=False,
+    plt.show()
+    plt.savefig(os.path.join(dir,subjs,model+'_model_voxel_compare.png'))
+
+def get_primal_coef(pipeline,target,dir,backend,model,subjs,sess):
+
+    rscore_test=np.load(os.path.join(dir,'rscore_test.npy'))
     primal_coef = pipeline[-1].get_primal_coef()
     primal_coef = backend.to_numpy(primal_coef)
     primal_coef /= np.linalg.norm(primal_coef, axis=0)[None]
-    primal_coef *= np.sqrt(np.maximum(0, scores_test ))[None]
+    primal_coef *= np.sqrt(np.maximum(0, rscore_test ))[None]
     print("(n_features, n_voxels) =", primal_coef.shape)
     if model =='semantic':
         delayer = pipeline.named_steps['delayer']
@@ -247,9 +278,9 @@ def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
 
     return primal_coef
 
-def plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess):
+def plot_RGB(pipeline,target,dir,backend,model,subjs,sess):
 
-    primal_coef=get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess)
+    primal_coef=get_primal_coef(pipeline,target,dir,backend,model,subjs,sess)
     set_pycortex_store(os.path.join(DATA_DIR, 'ds003020/derivative/pycortex-db'))
     # perform PCA on the voxel coefficients
     components,pca =pca_com(primal_coef)
@@ -301,7 +332,8 @@ if __name__ == "__main__":
     if model == "semantic":
 
         print("Semantic model selected ...")
-        X_train, X_test = semantic_features(sess,threshold)
+        
+        X_train, X_test = semantic_features(subjs,sess)
 
     else:
         
@@ -321,12 +353,13 @@ if __name__ == "__main__":
         print(f"Model saved in {dir}")
         save_predict(pipeline,X_train ,X_test ,dir)
         save_scores(scores_train,scores_test,dir)
+        save_rscore(dir,X_train,X_test)
         save_histogram("Train Data",scores_train,dir)
         save_histogram("Test Data",scores_test,dir)
         save_cortex("Train Data",target,scores_train,dir,model)
         save_cortex("Test Data",target,scores_test,dir,model)
         plot_alphas(backend,dir,alphas)
-        plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
+        plot_RGB(pipeline,target,dir,backend,model,subjs,sess)
 
     elif check_file(os.path.join(get_model_filename_dir(subjs,sess,target,model)[1],get_model_filename_dir(subjs,sess,target,model)[0])):
         print("Loading existing model...")
@@ -336,6 +369,7 @@ if __name__ == "__main__":
         scores_test = pipeline.score(X_test ,Y_test )
         print("(n_voxels test,) =", scores_test.shape)
         #scores_test = backend.to_numpy(scores_test)
+        #save_scores(scores_train,scores_test,dir)
         #plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
 
     else:
