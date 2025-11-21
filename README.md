@@ -31,15 +31,15 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
 5. Semantic model
     ```
-    $ python semantic_model.py --subject sub-UTS03 --sessions 1a --savemodel True
+    $ python train_models.py --subject sub-UTS02  --target sub-UTS02 --sessions 1a --model semantic --savemodel True
     ```
 6. Converter model
     ```
-    $ python converter_ed.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converter --savemodel True
+    $ python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converter --savemodel True
     ```
 7. Converted model
     ```
-    $ python converter_ed.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converted --savemodel True
+    $ python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converted --savemodel True
     ```
 8. Compare models
     ```
