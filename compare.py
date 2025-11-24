@@ -7,18 +7,19 @@ import sklearn.metrics
 
 def load_primal_coef(subjs,sess,target,model):
     if subjs == 'sub-UTS02':
-        file_name = subjs+'_'+sess+str.capitalize(model)+'_primal_coef.npy'
+        file_name = subjs+'_'+sess+model+'_primal_coef'
         directory=os.path.join(RESULTS_DATA_DIR,subjs,sess,model+'_model')
 
     else: 
-        file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef.npy'
+        file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef'
         directory=os.path.join(RESULTS_DATA_DIR,subjs,sess+'_'+target,model+'_model')
 
     print(f"Loading {file_name}.npy from {dir}")
-    primal_coef=np.load(os.path.join(directory,file_name))
-    return primal_coef
+    primal_coef_r=np.load(os.path.join(directory,file_name+'_r.npy'))
+    primal_coef_r2=np.load(os.path.join(directory,file_name+'_r2.npy'))
+    return primal_coef_r2, primal_coef_r
 
-def compute_r(weight, sess):
+def compute_r(weight,weight2,sess):
     """
     Compute pairwise Pearson correlations between weight maps for labels 'a','b','c'.
     Returns:
@@ -35,10 +36,12 @@ def compute_r(weight, sess):
         print(f"Computing correlation between {key1} and {key2}")
         w1 = weight.get(key1)
         w2 = weight.get(key2)
+        w1_2 = weight2.get(key1)
+        w2_2 = weight2.get(key2)
         if w1 is None or w2 is None:
             raise KeyError(f"Missing weights for keys: {key1} or {key2}")
         corr = np.corrcoef(w1.ravel(), w2.ravel())[0, 1]
-        corr2= sklearn.metrics.r2_score(w1.ravel(), w2.ravel())
+        corr2= sklearn.metrics.r2_score(w1_2.ravel(), w2_2.ravel())
         r.append(corr)
         r2.append(corr2)
     average_r = float(np.mean(r))
@@ -59,6 +62,7 @@ def plot_r(sess_r_values,sess,subjs,target,model,name):
     if not os.path.exists(directory):
         os.makedirs(directory)
     plt.savefig(os.path.join(directory,f'mean_similarities_weights_{name}.png'))
+    np.save(os.path.join(directory,name+"-values.npy"), sess_r_values)
     plt.close()
     
 if __name__ == "__main__":
@@ -84,10 +88,12 @@ if __name__ == "__main__":
         sess_r_values = []
         sess_r2_values = []
         weight={}
+        weight2={}
         for i in ['a','b','c']:
-            primal_coef=load_primal_coef(subjs,j+i,target,model)
-            weight[f'{j}{i}']=primal_coef
-        r_value,r2_value=compute_r(weight,j)
+            primal_coef_r,primal_coef_r2 =load_primal_coef(subjs,j+i,target,model)
+            weight[f'{j}{i}']=primal_coef_r
+            weight2[f'{j}{i}']=primal_coef_r2
+        r_value,r2_value=compute_r(weight,weight2,j)
         sess_r_values.append(r_value)
         sess_r2_values.append(r2_value)
         print("r values of j : ",sess_r_values)
