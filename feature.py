@@ -136,11 +136,12 @@ if __name__ == "__main__":
 	else:
 		remove = None
 		save_location = os.path.join(REPO_DIR, "feature",feature, subject[0],s)
-
 	os.makedirs(save_location, exist_ok=True)
-	with open(os.path.join(EM_DATA_DIR, f"sess_{sessions[0][0]}.json"), "r") as f:
-		sess_to_story = json.load(f)
-
+	if len(sessions) == 1:
+		print("File :",sessions[0][:-1])
+		with open(os.path.join(EM_DATA_DIR, f"sess_{sessions[0][:-1]}.json"), "r") as f:
+			sess_to_story = json.load(f)
+	
 	train_stories, test_stories = [], []
 	for sess in sessions:
 		stories, tstory = sess_to_story[sess][0], sess_to_story[sess][1]
