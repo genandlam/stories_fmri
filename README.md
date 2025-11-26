@@ -14,10 +14,15 @@ This repository contains code and resources related to fMRI data analysis for na
 - `/feature` - Output features
 
 ## Obtain data 
-    ```
-    datalad get -r -J8 derivative/preprocessed_data/UTS01/{cautioneating,jugglingandjesus,mayorofthefreaks,thecurse,theinterview,thetriangleshirtwaistconnection}.hf5
 
-    datalad get -r -J8 derivative/TextGrids/{cautioneating,jugglingandjesus,mayorofthefreaks,thecurse,theinterview,thetriangleshirtwaistconnection}.TextGrid
+1. Download fmri data & text from natural language listening data (LeBel et al.) that can be found at openneuro.
+    - fMRI data 
+    ```
+    datalad get -r -J8 derivative/preprocessed_data/UTS01/{cautioneating,thetriangleshirtwaistconnection}.hf5
+    ```
+    - Text data 
+    ```
+    datalad get -r -J8 derivative/TextGrids/{cautioneating,thetriangleshirtwaistconnection}.TextGrid
     ```
 ## Getting Started
 

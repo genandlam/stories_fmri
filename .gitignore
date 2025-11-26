@@ -1,5 +1,10 @@
 config/*
-results/*
+
+results/eng1000/sub-UTS01/*
+results/eng1000/sub-UTS03/*
+results/eng1000/sub-UTS02/*
+results/eng1000/sub-UTS01_sub-UTS03/*
+
 feature/*
 
 # Python specific
@@ -7,3 +12,4 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 *.npz
+

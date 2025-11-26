@@ -266,6 +266,7 @@ def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
     primal_coef_r2 *= np.sqrt(np.maximum(0, scores_test ))
     primal_coef_r *= np.sqrt(np.maximum(0, rscore_test ))
     print("(n_features, n_voxels) =", primal_coef.shape)
+
     if model =='semantic':
         delayer = pipeline.named_steps['delayer']
         primal_coef_per_delay = delayer.reshape_by_delays(primal_coef_r2, axis=0)
@@ -279,7 +280,6 @@ def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
         file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef'
     np.save(os.path.join(dir,file_name+'_r'),primal_coef_r)
     np.save(os.path.join(dir,file_name+'_r2'),primal_coef_r2)
-
 
     return primal_coef_r2
 
