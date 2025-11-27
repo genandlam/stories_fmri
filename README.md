@@ -9,9 +9,13 @@ This repository contains code and resources related to fMRI data analysis for na
 
 ## Repository Structure
 
-- `/*.ipynb` - Jupyter notebooks for exploratory analysis
-- `/results` - Output results and features
+- `/*.ipynb` - Jupyter notebooks the training examples of having 33 stories (Semantic/baseline model,Converter/transform model and converted model)
+- `/results` - Output results
 - `/feature` - Output features
+
+## Jupyter notebooks 
+
+- All models uses Session 9,10,11,12 and canonical that adds up to 33 stories
 
 ## Obtain data 
 

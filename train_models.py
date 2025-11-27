@@ -66,18 +66,25 @@ def semantic_features(subject,sess):
 
         return X_train,X_test
 
-def select_voxels(subj,sess,threshold,model):
+
+def select_voxels(subj,save_voxel,threshold,model):
 
     if model == "converter":
-        X_train = open_json(subj,sess,'fmri_train.json')
+        X_train = open_json(subj,save_voxel,'fmri_train.json')
     elif model == "converted":
-        X_train = open_npy(subj,sess,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
+        X_train = open_npy(subj,save_voxel,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
 
-    X_test = open_npy(subj,sess,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
+    X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
+
     X_train,X_test=check_mean_sf(X_train,X_test)
-
-    scores_train = open_npy(subj,sess,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
-    best_voxels = np.argsort(scores_train)[::-1][:threshold]
+    if check_file(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy')) == False:
+        scores_train = open_npy(subj,save_voxel,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
+        best_voxels = np.argsort(scores_train)[::-1][:threshold]
+        np.save(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy'), best_voxels)
+        print(f"Best voxels saved in {os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy')}")
+    else:
+        best_voxels = np.load(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy'))
+        print(f"Best voxels loaded from {os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy')}")
 
     print("(n_samples_train, n_features) =", X_train[:, best_voxels].shape)
     print("(n_samples_test, n_features) =", X_test[:, best_voxels].shape)
@@ -320,6 +327,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", choices=['converter', 'converted','semantic'], required=True, help='Select model type.')
     parser.add_argument("--savemodel", type=bool, default=False)
     parser.add_argument("--threshold", type=int, default=1000)
+    parser.add_argument("--save_voxel", type=str, default='27a', help='Session name where to save/load best voxels.')
     logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
     globals().update(args.__dict__)
@@ -341,15 +349,21 @@ if __name__ == "__main__":
         X_train, X_test = semantic_features(subjs,sess)
 
     else:
-        
-        X_train_best,X_test_best= select_voxels(subject[0],sess,threshold,model)
-        X_train_best_2,X_test_best_2= select_voxels(subject[1],sess,threshold,model)
 
-        X_train = np.concatenate([X_train_best, X_train_best_2], axis=0)
-        X_test = np.concatenate([X_test_best, X_test_best_2], axis=0)
-    
-        Y_train = np.concatenate([Y_train, Y_train], axis=0)
-        Y_test = np.concatenate([Y_test, Y_test], axis=0)
+        X_train = np.empty((0, threshold))
+        X_test = np.empty((0, threshold))
+        y_train = np.empty((0, Y_train.shape[1]))
+        y_test = np.empty((0, Y_test.shape[1]))
+        
+        for i in range (len(subject)): 
+            X_train_best,X_test_best= select_voxels(subject[i],save_voxel,threshold,model,)
+            X_train=np.vstack([X_train, X_train_best])
+            X_test=np.vstack([X_test, X_test_best])
+            y_train = np.vstack([y_train, Y_train])
+            y_test = np.vstack([y_test, Y_test])
+
+        Y_test = y_test
+        Y_train = y_train
 
     if savemodel == True:
 
