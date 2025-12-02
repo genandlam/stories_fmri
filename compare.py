@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import sklearn.metrics
 
 
-def load_primal_coef(subjs,sess,target,model):
+def load_primal_coef(subjs,sess,target,model,save_voxel):
     if subjs == 'sub-UTS02':
         file_name = subjs+'_'+sess+model+'_primal_coef'
         directory=os.path.join(RESULTS_DATA_DIR,subjs,sess,model+'_model')
@@ -13,10 +13,11 @@ def load_primal_coef(subjs,sess,target,model):
     else: 
         file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef'
         directory=os.path.join(RESULTS_DATA_DIR,subjs,sess+'_'+target,model+'_model')
-
+    best_voxels = np.load(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy'))
     print(f"Loading {file_name}.npy from {dir}")
     primal_coef_r=np.load(os.path.join(directory,file_name+'_r.npy'))
     primal_coef_r2=np.load(os.path.join(directory,file_name+'_r2.npy'))
+    #return primal_coef_r2[:, best_voxels], primal_coef_r[:, best_voxels]
     return primal_coef_r2, primal_coef_r
 
 def compute_r(weight,weight2,sess):
@@ -72,6 +73,7 @@ if __name__ == "__main__":
     parser.add_argument("--target", type=str, required=True)
     parser.add_argument("--sessions", nargs='+', type=int, required=True)
     parser.add_argument("--model", choices=['converter', 'converted','semantic'], required=True, help='Select model type.')
+    parser.add_argument("--save_voxel", type=str, default='27a', help='Path to saved voxel selection.')
     logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
     globals().update(args.__dict__)
@@ -90,7 +92,7 @@ if __name__ == "__main__":
         weight={}
         weight2={}
         for i in ['a','b','c']:
-            primal_coef_r,primal_coef_r2 =load_primal_coef(subjs,j+i,target,model)
+            primal_coef_r,primal_coef_r2 =load_primal_coef(subjs,j+i,target,model,save_voxel)
             weight[f'{j}{i}']=primal_coef_r
             weight2[f'{j}{i}']=primal_coef_r2
         r_value,r2_value=compute_r(weight,weight2,j)

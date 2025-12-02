@@ -67,12 +67,14 @@ def semantic_features(subject,sess):
         return X_train,X_test
 
 
-def select_voxels(subj,save_voxel,threshold,model):
+def select_voxels(subj,sess,save_voxel,threshold,model):
 
     if model == "converter":
-        X_train = open_json(subj,save_voxel,'fmri_train.json')
+        X_train = open_json(subj,sess,'fmri_train.json')
+        #X_select = open_json(subj,save_voxel,'fmri_train.json')
     elif model == "converted":
-        X_train = open_npy(subj,save_voxel,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
+        X_train = open_npy(subj,sess,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
+        #X_select = open_json(subj,save_voxel,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
 
     X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
 
@@ -356,7 +358,7 @@ if __name__ == "__main__":
         y_test = np.empty((0, Y_test.shape[1]))
         
         for i in range (len(subject)): 
-            X_train_best,X_test_best= select_voxels(subject[i],save_voxel,threshold,model,)
+            X_train_best,X_test_best= select_voxels(subject[i],sess,save_voxel,threshold,model)
             X_train=np.vstack([X_train, X_train_best])
             X_test=np.vstack([X_test, X_test_best])
             y_train = np.vstack([y_train, Y_train])
