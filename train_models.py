@@ -71,14 +71,13 @@ def select_voxels(subj,sess,save_voxel,threshold,model):
 
     if model == "converter":
         X_train = open_json(subj,sess,'fmri_train.json')
-        #X_select = open_json(subj,save_voxel,'fmri_train.json')
+
     elif model == "converted":
         X_train = open_npy(subj,sess,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
-        #X_select = open_json(subj,save_voxel,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
 
     X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
-
     X_train,X_test=check_mean_sf(X_train,X_test)
+
     if check_file(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy')) == False:
         scores_train = open_npy(subj,save_voxel,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
         best_voxels = np.argsort(scores_train)[::-1][:threshold]
@@ -177,7 +176,6 @@ def save_predict(pipeline,X_train,X_test,dir):
     np.save(os.path.join(dir,'test_predict'), test_predict )    
 
 def save_rscore(dir,X_train,X_test):
-
     predict_train=np.load(os.path.join(dir,'train_predict.npy'))
     predict_test=np.load(os.path.join(dir,'test_predict.npy'))
     corr_train = np.corrcoef(X_train.ravel(), predict_train.ravel())[0, 1]
@@ -328,7 +326,7 @@ if __name__ == "__main__":
     parser.add_argument("--sessions", nargs='+', type=str, required=True)
     parser.add_argument("--model", choices=['converter', 'converted','semantic'], required=True, help='Select model type.')
     parser.add_argument("--savemodel", type=bool, default=False)
-    parser.add_argument("--threshold", type=int, default=1000)
+    parser.add_argument("--threshold", type=int, default=10000)
     parser.add_argument("--save_voxel", type=str, default='27a', help='Session name where to save/load best voxels.')
     logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
