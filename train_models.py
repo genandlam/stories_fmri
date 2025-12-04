@@ -82,10 +82,11 @@ def select_voxels(subj,sess,save_voxel,threshold,model):
         scores_train = open_npy(subj,save_voxel,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
         best_voxels = np.argsort(scores_train)[::-1][:threshold]
         np.save(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy'), best_voxels)
-        print(f"Best voxels saved in {os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy')}")
+ 
     else:
-        best_voxels = np.load(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy'))
-        print(f"Best voxels loaded from {os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy')}")
+        best_voxels = open_npy(subj,save_voxel,'semantic_model/best_voxels.npy',dir=RESULTS_DATA_DIR)
+        #np.load(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy'))
+    
 
     print("(n_samples_train, n_features) =", X_train[:, best_voxels].shape)
     print("(n_samples_test, n_features) =", X_test[:, best_voxels].shape)
@@ -135,11 +136,9 @@ def train_model(subj,sess,X_train,Y_train,X_test,Y_test,model):
     )
     _ = pipeline.fit(X_train, Y_train)
 
-    scores_train = pipeline.score(X_train,Y_train)
-    scores_train = backend.to_numpy(scores_train)
+    scores_train = backend.to_numpy(pipeline.score(X_train,Y_train))
     print("(n_voxels train,) =", scores_train.shape)
-    scores_test = pipeline.score(X_test, Y_test)
-    scores_test = backend.to_numpy(scores_test)
+    scores_test = backend.to_numpy(pipeline.score(X_test, Y_test))
     print("(n_voxels test,) =", scores_test.shape)
 
     return pipeline,scores_train,scores_test,alphas,backend

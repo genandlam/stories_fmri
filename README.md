@@ -67,20 +67,20 @@ This repository contains code and resources related to fMRI data analysis for na
 
 4a. Features
     ```
-    $ for i in {11..27..2}; do for j in "a" "b" "c" ; do python feature.py --subject sub-UTS01 --feature eng1000 --sessions $i$j; done; done;
+    $ for i in {1..27..2}; do for j in "a" "b" "c" ; do python feature.py --subject sub-UTS01 --feature eng1000 --sessions $i$j; done; done;
 
     ```
 5a. Semantic model
     ```
-    $ for i in {11..27..2} ; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS02 --target sub-UTS02 --sessions $i$j --model semantic --savemodel True; done; done;
+    $ for i in {1..27..2} ; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS02 --target sub-UTS02 --sessions $i$j --model semantic --savemodel True; done; done;
     ```
 6a. Converter model
     ```
-   $ for i in {11..27..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converter --savemodel True ; done; done;
+   $ for i in {1..27..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converter --savemodel True ; done; done;
     ```
 7a. Converted model
     ```
-   $ for i in {11..27..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converted --savemodel True ; done; done;
+   $ for i in {1..27..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converted --savemodel True ; done; done;
     ```
 
 
