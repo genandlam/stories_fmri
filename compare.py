@@ -4,7 +4,12 @@ from config.dir import DATA_DIR, EM_DATA_DIR,RESULTS_DATA_DIR,FEATURE_DATA_DIR
 import matplotlib.pyplot as plt
 import sklearn.metrics
 
-
+def check_file(file):
+    if not os.path.isfile(file):
+        return False
+    else:
+        return True
+    
 def open_npy(subj,sess,file,dir=RESULTS_DATA_DIR):
     data = np.load(os.path.join(dir,subj,sess,file))
     print(f"Loaded {file} with shape: ", data.shape)
@@ -16,17 +21,23 @@ def load_primal_coef(subjs,sess,target,model,save_voxel,threshold):
         file_name = subjs+'_'+sess+model+'_primal_coef'
         primal_coef_r=open_npy(subjs,sess,model+'_model/'+file_name+'_r.npy')
         primal_coef_r2= open_npy(subjs,sess,model+'_model/'+file_name+'_r2.npy')
+   
         # using the save_voxel best voxel selection for UTS02
-
         scores_train = open_npy(subjs,save_voxel,model+'_model'+'/scores_train.npy')
         best_voxels = np.argsort(scores_train)[::-1][:threshold]
 
     else: 
+
         file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef'
         primal_coef_r=open_npy(subjs,sess+'_'+target,model+'_model/'+file_name+'_r.npy')
         primal_coef_r2=open_npy(subjs,sess+'_'+target,model+'_model/'+file_name+'_r2.npy')
-        best_voxels = open_npy(subjs,save_voxel,'semantic_model/best_voxels.npy')
 
+        if check_file(os.path.join(RESULTS_DATA_DIR,subjs,save_voxel+'_'+target,model+'_model/best_voxels.npy')) == False:
+            scores_train = open_npy(subjs,save_voxel+'_'+target,model+'_model/scores_train.npy')
+            best_voxels = np.argsort(scores_train)[::-1][:threshold]
+            np.save(os.path.join(RESULTS_DATA_DIR,subjs,save_voxel+'_'+target,model+'_model/best_voxels.npy'), best_voxels)
+        else:
+            best_voxels = open_npy(subjs,save_voxel+'_'+target,model+'_model/best_voxels.npy')
 
     return primal_coef_r2[:, best_voxels], primal_coef_r[:, best_voxels]
 
