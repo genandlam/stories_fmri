@@ -85,15 +85,15 @@ def select_voxels(subj,sess,save_voxel,threshold,model,target):
         X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
 
     elif model == "converted":
-
-        pipeline,dir,backend  = load_model(subj,save_voxel,target,"semantic")
+        pipeline,dir, _ = load_model(subj,save_voxel,target,"semantic")
         X_train = open_json(subj,sess,'features_train.json')
         X_test = open_json(subj,sess,'features_test.json')
-        X_train,X_test=save_predict(pipeline,X_train,X_test,dir,Y_No=False)
+        X_train,X_test = save_predict(pipeline,X_train,X_test,dir,Y_No=False)
+        
+    elif model == "converted_same":
+        X_train = open_npy(subj,sess,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
+        X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
 
-        #X_train = open_npy(subj,save_voxel,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
-
-    #X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
     X_train,X_test=check_mean_sf(X_train,X_test)
 
     if check_file(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy')) == False:
@@ -125,7 +125,7 @@ def save_model(pipeline,subj,sess,target,model):
     joblib.dump(pipeline, os.path.join(directory,file_name), compress=True) 
     return directory
 
-def train_model(subj,sess,X_train,Y_train,X_test,Y_test,model):
+def train_model(subj,sess,X_train,X_test,model):
     run_onsets= create_run_on_set(subj,sess)
     if len(run_onsets) > 1 : 
         n_samples_train = X_train.shape[0]
@@ -153,12 +153,7 @@ def train_model(subj,sess,X_train,Y_train,X_test,Y_test,model):
     )
     _ = pipeline.fit(X_train, Y_train)
 
-    scores_train = backend.to_numpy(pipeline.score(X_train,Y_train))
-    print("(n_voxels train,) =", scores_train.shape)
-    scores_test = backend.to_numpy(pipeline.score(X_test, Y_test))
-    print("(n_voxels test,) =", scores_test.shape)
-
-    return pipeline,scores_train,scores_test,alphas,backend
+    return pipeline,alphas,backend
 
 def get_model_filename_dir(subj,sess,target,model):
 
@@ -180,11 +175,18 @@ def save_histogram(title,scores,dir):
     plt.show()
     plt.savefig(dir+'/'+title+'_histogram.png')
 
-def save_scores(scores_train,scores_test):
-    print("score saving:", scores_train)
+def save_scores(pipeline,backend,X_train,Y_train,X_test, Y_test,save_score=True):
 
-    np.save(os.path.join(dir,'scores_train'), scores_train)
-    np.save(os.path.join(dir,'scores_test'), scores_test)
+    scores_train = backend.to_numpy(pipeline.score(X_train,Y_train))
+    print("(n_voxels train,) =", scores_train.shape)
+    scores_test = backend.to_numpy(pipeline.score(X_test, Y_test))
+    print("(n_voxels test,) =", scores_test.shape)
+
+    if save_score:
+        print("score saving ...")
+        np.save(os.path.join(dir,'scores_train'), scores_train)
+        np.save(os.path.join(dir,'scores_test'), scores_test)
+    return scores_test,scores_train
 
 def save_rscore(dir,X_train,X_test):
     predict_train=np.load(os.path.join(dir,'train_predict.npy'))
@@ -363,7 +365,7 @@ if __name__ == "__main__":
 
         X_train = np.empty((0, threshold)) # (n_train_stories * n_subjects, n_voxels)
         X_test = np.empty((0, threshold)) # (n_test_stories * n_subjects, n_voxels)  
-        y_train = np.empty((0, Y_train.shape[1])) # ()
+        y_train = np.empty((0, Y_train.shape[1]))
         y_test = np.empty((0, Y_test.shape[1]))
         
         for i in range (len(subject)): 
@@ -379,11 +381,11 @@ if __name__ == "__main__":
 
     if savemodel == True:
 
-        pipeline,scores_train,scores_test,alphas,backend = train_model(subjs,sess,X_train,Y_train,X_test,Y_test,model)
+        pipeline,alphas,backend = train_model(subjs,sess,X_train,X_test,model)
         dir = save_model(pipeline,subjs,sess,target,model)
         print(f"Model saved in {dir}")
         save_predict(pipeline,X_train ,X_test ,dir)
-        save_scores(scores_train,scores_test,dir,False)
+        scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test, Y_test,save_score=True)
         save_rscore(dir,Y_train,Y_test)
         save_histogram("Train Data",scores_train,dir)
         save_histogram("Test Data",scores_test,dir)
@@ -395,19 +397,17 @@ if __name__ == "__main__":
     elif check_file(os.path.join(get_model_filename_dir(subjs,sess,target,model)[1],get_model_filename_dir(subjs,sess,target,model)[0])):
         print("Loading existing model...")
         pipeline,dir,backend = load_model(subjs,sess,target,model)
-        scores_train = pipeline.score(X_train ,Y_train )
-        print("(n_voxels train,) =", scores_train.shape)
-        scores_test = pipeline.score(X_test ,Y_test )
-        print("(n_voxels test,) =", scores_test.shape)
-        scores_test = backend.to_numpy(scores_test)
-        scores_train = backend.to_numpy(scores_train)
+        #scores_train = backend.to_numpy(pipeline.score(X_train ,Y_train ))
+        #print("(n_voxels train,) =", scores_train.shape)
+        #scores_test = backend.to_numpy(pipeline.score(X_test ,Y_test ))
+        #print("(n_voxels test,) =", scores_test.shape)
         save_rscore(dir,Y_train,Y_test)
-        save_scores(scores_train,scores_test,dir)
+        scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test, Y_test)
         plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
 
     else:
 
-        pipeline,scores_train,scores_test,alphas,backend  = train_model(subjs,sess,X_train ,Y_train ,X_test ,Y_test,model) 
-        print(pipeline.predict(X_train))
-        print(pipeline.predict(X_test))
+        pipeline,alphas,backend  = train_model(subjs,sess,X_train ,X_test,model) 
+        save_predict(pipeline,X_train ,X_test,dir,False)
+        print(f'Trained Data shapes: X_train: {X_train.shape}, X_test: {X_test.shape}')
 

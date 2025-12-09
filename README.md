@@ -54,7 +54,7 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
 7. Converted model
     ```
-    $ S02 --python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTsessions 1a --model converted --savemodel True
+    $ python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converted --savemodel True
     ```
 8. Compare models
     ```
