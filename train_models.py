@@ -39,11 +39,12 @@ def check_file(file):
         return True
     
 def save_predict(pipeline,X_train,X_test,dir,Y_No=True):
+
     train_predict=pipeline.predict(X_train)
     test_predict=pipeline.predict(X_test)
-    print("train predict saving:", train_predict)
 
     if Y_No:
+        print("train predict saving:", train_predict[:3])
         np.save(os.path.join(dir,'train_predict'), train_predict )
         np.save(os.path.join(dir,'test_predict'), test_predict )   
     
@@ -84,11 +85,15 @@ def select_voxels(subj,sess,save_voxel,threshold,model,target):
         X_train = open_json(subj,sess,'fmri_train.json')
         X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
 
+    elif model == "converter_same":
+        X_train = open_json(subj,sess,'fmri_train.json')
+        X_test = open_npy(subj,sess,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
+
     elif model == "converted":
         pipeline,dir, _ = load_model(subj,save_voxel,target,"semantic")
-        X_train = open_json(subj,sess,'features_train.json')
-        X_test = open_json(subj,sess,'features_test.json')
+        X_train,X_test = semantic_features(subj,sess)
         X_train,X_test = save_predict(pipeline,X_train,X_test,dir,Y_No=False)
+        X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
         
     elif model == "converted_same":
         X_train = open_npy(subj,sess,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
@@ -103,7 +108,6 @@ def select_voxels(subj,sess,save_voxel,threshold,model,target):
  
     else:
         best_voxels = open_npy(subj,save_voxel,'semantic_model/best_voxels.npy',dir=RESULTS_DATA_DIR)
-        #np.load(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy'))
     
     print("(n_samples_train, n_features) =", X_train[:, best_voxels].shape)
     print("(n_samples_test, n_features) =", X_test[:, best_voxels].shape)
@@ -125,7 +129,7 @@ def save_model(pipeline,subj,sess,target,model):
     joblib.dump(pipeline, os.path.join(directory,file_name), compress=True) 
     return directory
 
-def train_model(subj,sess,X_train,X_test,model):
+def train_model(subj,sess,X_train,Y_train,model):
     run_onsets= create_run_on_set(subj,sess)
     if len(run_onsets) > 1 : 
         n_samples_train = X_train.shape[0]
@@ -172,10 +176,9 @@ def save_histogram(title,scores,dir):
     plt.title("Histogram of "+title+" R-squared values")
     plt.ylabel("Frequency")
     plt.xlabel("R-squared")
-    plt.show()
     plt.savefig(dir+'/'+title+'_histogram.png')
 
-def save_scores(pipeline,backend,X_train,Y_train,X_test, Y_test,save_score=True):
+def save_scores(pipeline,backend,X_train,Y_train,X_test,Y_test,save_score=True):
 
     scores_train = backend.to_numpy(pipeline.score(X_train,Y_train))
     print("(n_voxels train,) =", scores_train.shape)
@@ -186,6 +189,7 @@ def save_scores(pipeline,backend,X_train,Y_train,X_test, Y_test,save_score=True)
         print("score saving ...")
         np.save(os.path.join(dir,'scores_train'), scores_train)
         np.save(os.path.join(dir,'scores_test'), scores_test)
+
     return scores_test,scores_train
 
 def save_rscore(dir,X_train,X_test):
@@ -227,7 +231,6 @@ def save_cortex(title,subj,scores,dir,model):
 
     # You can plot both as you would normally plot Volume and Vertex data
     cortex.quickshow(voxel_vol, with_rois=False)
-    plt.show()
     plt.savefig(os.path.join(dir,subj+title+'_'+model+'_model_voxel.png'))
     plt.clf()
 
@@ -259,7 +262,6 @@ def compare_hist(dir,subjs,model,scores,target):
     ax = plot_hist2d(scores_baseline, scores,vmin=-0.2, vmax=0.4)
     ax.set(title='Generalization R2 scores', ylabel='Baseline model',
         xlabel='Transform model')
-    plt.show()
     plt.savefig(os.path.join(dir,subjs,model+'_model_hist_compare.png'))
 
 def compare_heatmap(dir,subjs,model,scores,target):
@@ -272,14 +274,12 @@ def compare_heatmap(dir,subjs,model,scores,target):
                             vmin=0,vmin2=0, vmax=0.2, vmax2=0.2
                             )
     cortex.quickshow(vol_data, with_rois=False )# with_colorbar=False,
-    plt.show()
     plt.savefig(os.path.join(dir,subjs,model+'_model_voxel_compare.png'))
 
 def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
 
     rscore_test=np.load(os.path.join(dir,'rscore_test.npy'))
-    primal_coef = pipeline[-1].get_primal_coef()
-    primal_coef = backend.to_numpy(primal_coef)
+    primal_coef = backend.to_numpy(pipeline[-1].get_primal_coef())
     primal_coef /= np.linalg.norm(primal_coef, axis=0)
     primal_coef_r2= np.copy(primal_coef)
     primal_coef_r= np.copy(primal_coef)
@@ -328,7 +328,6 @@ def plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess):
     blue = cortex.Volume(test3_scaled.astype(np.uint8),  subject, xfm)
     vol_data = cortex.VolumeRGB(red, green, blue, subject,vmin=0, vmax=1, vmin2=0, vmax2=1, vmin3=0, vmax3=1)
     cortex.quickshow(vol_data, with_colorbar=False)
-    plt.show()
     plt.savefig(os.path.join(dir,subjs+'RGB_'+model+'_model_voxel.png'))
 
 if __name__ == "__main__":
@@ -337,15 +336,15 @@ if __name__ == "__main__":
     parser.add_argument("--subject",  nargs='+', type=str, required=True)
     parser.add_argument("--target", type=str, required=True)
     parser.add_argument("--sessions", nargs='+', type=str, required=True)
-    parser.add_argument("--model", choices=['converter', 'converted','semantic'], required=True, help='Select model type.')
+    parser.add_argument("--model", choices=['converter', 'converted','converted_same','semantic'], required=True, help='Select model type.')
     parser.add_argument("--savemodel", type=bool, default=False)
     parser.add_argument("--threshold", type=int, default=10000)
     parser.add_argument("--save_voxel", type=str, default='27a', help='Session name where to save/load best voxels.')
     logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
     globals().update(args.__dict__)
-
     assert len(subject) <= 2 and len(subject) >=1, "1 <= subjects <= 2"
+
     sessions = list(map(str, sessions))
     subject = list(map(str, subject))
     sess = '_'.join(sessions)
@@ -358,7 +357,6 @@ if __name__ == "__main__":
     if model == "semantic":
 
         print("Semantic model selected ...")
-        
         X_train, X_test = semantic_features(subjs,sess)
 
     else:
@@ -375,17 +373,18 @@ if __name__ == "__main__":
             X_test=np.vstack([X_test, X_test_best])
             y_train = np.vstack([y_train, Y_train])
             y_test = np.vstack([y_test, Y_test])
-            print(X_train.shape,y_train.shape,y_test.shape,X_test.shape)
+            print(X_train.shape,y_train.shape,X_test.shape,y_test.shape)
+
         Y_test = y_test
         Y_train = y_train
 
     if savemodel == True:
 
-        pipeline,alphas,backend = train_model(subjs,sess,X_train,X_test,model)
+        pipeline,alphas,backend = train_model(subjs,sess,X_train,Y_train,model)
         dir = save_model(pipeline,subjs,sess,target,model)
         print(f"Model saved in {dir}")
-        save_predict(pipeline,X_train ,X_test ,dir)
-        scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test, Y_test,save_score=True)
+        save_predict(pipeline,X_train ,X_test,dir)
+        scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test,Y_test)
         save_rscore(dir,Y_train,Y_test)
         save_histogram("Train Data",scores_train,dir)
         save_histogram("Test Data",scores_test,dir)
@@ -397,17 +396,12 @@ if __name__ == "__main__":
     elif check_file(os.path.join(get_model_filename_dir(subjs,sess,target,model)[1],get_model_filename_dir(subjs,sess,target,model)[0])):
         print("Loading existing model...")
         pipeline,dir,backend = load_model(subjs,sess,target,model)
-        #scores_train = backend.to_numpy(pipeline.score(X_train ,Y_train ))
-        #print("(n_voxels train,) =", scores_train.shape)
-        #scores_test = backend.to_numpy(pipeline.score(X_test ,Y_test ))
-        #print("(n_voxels test,) =", scores_test.shape)
+        scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test,Y_test)
         save_rscore(dir,Y_train,Y_test)
-        scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test, Y_test)
         plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
 
     else:
 
-        pipeline,alphas,backend  = train_model(subjs,sess,X_train ,X_test,model) 
+        pipeline,alphas,backend  = train_model(subjs,sess,X_train,Y_train,model) 
         save_predict(pipeline,X_train ,X_test,dir,False)
         print(f'Trained Data shapes: X_train: {X_train.shape}, X_test: {X_test.shape}')
-

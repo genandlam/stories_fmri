@@ -91,7 +91,7 @@ if __name__ == "__main__":
     parser.add_argument("--subject",  nargs='+', type=str, required=True)
     parser.add_argument("--target", type=str, required=True)
     parser.add_argument("--sessions", nargs='+', type=int, required=True)
-    parser.add_argument("--model", choices=['converter', 'converted','semantic'], required=True, help='Select model type.')
+    parser.add_argument("--model", choices=['converter', 'converted','converted_same','semantic'], required=True, help='Select model type.')
     parser.add_argument("--save_voxel", type=str, default='27a', help='Path to saved voxel selection.')
     parser.add_argument("--threshold", type=int, default=10000)
     logging.basicConfig(level=logging.INFO)
