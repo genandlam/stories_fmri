@@ -6,7 +6,7 @@ from himalaya.kernel_ridge import KernelRidgeCV
 from himalaya.backend import set_backend
 from voxelwise_tutorials.delayer import Delayer
 from sklearn.pipeline import make_pipeline
-from voxelwise_tutorials.utils import generate_leave_one_run_out
+from voxelwise_tutorials.utils import generate_leave_one_run_out,zscore_runs
 from sklearn.model_selection import check_cv
 import matplotlib.pyplot as plt
 from utils.npp import zscore
@@ -90,16 +90,21 @@ def select_voxels(subj,sess,save_voxel,threshold,model,target):
         X_test = open_npy(subj,sess,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
 
     elif model == "converted":
-        pipeline,dir, _ = load_model(subj,save_voxel,target,"semantic")
+        pipeline,dir,backend = load_model(subj,save_voxel,target,"semantic")
         X_train,X_test = semantic_features(subj,sess)
         X_train,X_test = save_predict(pipeline,X_train,X_test,dir,Y_No=False)
-        X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
+        X_train= backend.to_numpy(X_train)
+        #X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
         
     elif model == "converted_same":
+
         X_train = open_npy(subj,sess,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
         X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
 
-    X_train,X_test=check_mean_sf(X_train,X_test)
+    #X_train,X_test=check_mean_sf(X_train,X_test)
+    run_onsets = create_run_on_set(subj,sess)
+    X_train = zscore_runs(X_train, run_onsets)
+    _,X_test=check_mean_sf(X_train,X_test)
 
     if check_file(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy')) == False:
         scores_train = open_npy(subj,save_voxel,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
@@ -281,23 +286,28 @@ def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
     rscore_test=np.load(os.path.join(dir,'rscore_test.npy'))
     primal_coef = backend.to_numpy(pipeline[-1].get_primal_coef())
     primal_coef /= np.linalg.norm(primal_coef, axis=0)
-    primal_coef_r2= np.copy(primal_coef)
-    primal_coef_r= np.copy(primal_coef)
+    primal_coef_r2 = np.copy(primal_coef)
+    primal_coef_r = np.copy(primal_coef)
     primal_coef_r2 *= np.sqrt(np.maximum(0, scores_test ))
     primal_coef_r *= np.sqrt(np.maximum(0, rscore_test ))
-    print("(n_features, n_voxels) =", primal_coef.shape)
+    print("(n_features, n_voxels) =", primal_coef_r2.shape)
 
     if model =='semantic':
         delayer = pipeline.named_steps['delayer']
         primal_coef_per_delay = delayer.reshape_by_delays(primal_coef_r2, axis=0)
+        primal_coef_per_delay_r = delayer.reshape_by_delays(primal_coef_r, axis=0)
         print("(n_delays, n_features, n_voxels) =", primal_coef_per_delay.shape)
         # average over delays
         average_coef = np.mean(primal_coef_per_delay, axis=0)
+        average_coef_r = np.mean(primal_coef_per_delay_r, axis=0)
         print("(n_features, n_voxels) =", average_coef.shape)
         file_name= subjs+'_'+sess+model+'_primal_coef'
         primal_coef_r2= average_coef
+        primal_coef_r= average_coef_r
+
     else:
         file_name = subjs+"_"+target+'_'+sess+model+'_primal_coef'
+
     np.save(os.path.join(dir,file_name+'_r'),primal_coef_r)
     np.save(os.path.join(dir,file_name+'_r2'),primal_coef_r2)
 
@@ -352,7 +362,9 @@ if __name__ == "__main__":
     
     Y_train = open_json(target,sess,'fmri_train.json') # (n_train_stories, n_voxels)
     Y_test = open_json(target,sess,'fmri_test.json') # (n_test_stories, n_voxels)
-    Y_train,Y_test=check_mean_sf(Y_train,Y_test)
+    run_onsets = create_run_on_set(subjs,sess)
+    Y_train = zscore_runs(Y_train, run_onsets)
+    _,Y_test=check_mean_sf(Y_train,Y_test)
     
     if model == "semantic":
 
