@@ -94,6 +94,7 @@ def select_voxels(subj,sess,save_voxel,threshold,model,target):
         X_train,X_test = semantic_features(subj,sess)
         X_train,X_test = save_predict(pipeline,X_train,X_test,dir,Y_No=False)
         X_train= backend.to_numpy(X_train)
+
         #X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
         
     elif model == "converted_same":
@@ -101,10 +102,10 @@ def select_voxels(subj,sess,save_voxel,threshold,model,target):
         X_train = open_npy(subj,sess,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
         X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
 
-    #X_train,X_test=check_mean_sf(X_train,X_test)
     run_onsets = create_run_on_set(subj,sess)
     X_train = zscore_runs(X_train, run_onsets)
     _,X_test=check_mean_sf(X_train,X_test)
+    X_train = np.nan_to_num(X_train)
 
     if check_file(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy')) == False:
         scores_train = open_npy(subj,save_voxel,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
@@ -365,7 +366,7 @@ if __name__ == "__main__":
     run_onsets = create_run_on_set(subjs,sess)
     Y_train = zscore_runs(Y_train, run_onsets)
     _,Y_test=check_mean_sf(Y_train,Y_test)
-    
+    Y_train = np.nan_to_num(Y_train)
     if model == "semantic":
 
         print("Semantic model selected ...")
