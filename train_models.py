@@ -80,7 +80,7 @@ def semantic_features(subject,sess):
 
 
 def select_voxels(subj,sess,save_voxel,threshold,model,target):
-
+# fmri -> fmri 
     if model == "converter":
         X_train = open_json(subj,sess,'fmri_train.json')
         X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
@@ -94,18 +94,19 @@ def select_voxels(subj,sess,save_voxel,threshold,model,target):
         X_train,X_test = semantic_features(subj,sess)
         X_train,X_test = save_predict(pipeline,X_train,X_test,dir,Y_No=False)
         X_train= backend.to_numpy(X_train)
-
+        X_test= backend.to_numpy(X_test)
         #X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
         
     elif model == "converted_same":
 
         X_train = open_npy(subj,sess,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
-        X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
+        X_test = open_npy(subj,sess,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
 
     run_onsets = create_run_on_set(subj,sess)
     X_train = zscore_runs(X_train, run_onsets)
     _,X_test=check_mean_sf(X_train,X_test)
     X_train = np.nan_to_num(X_train)
+    X_test = np.nan_to_num(X_test)
 
     if check_file(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy')) == False:
         scores_train = open_npy(subj,save_voxel,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
