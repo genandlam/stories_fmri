@@ -1,10 +1,5 @@
 config/*
-
-results/eng1000/sub-UTS01/*
-results/eng1000/sub-UTS03/*
-results/eng1000/sub-UTS02/*
-results/eng1000/sub-UTS01_sub-UTS03/*
-
+results/*
 feature/*
 
 # Python specific
