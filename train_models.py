@@ -2,7 +2,7 @@ import os,json,cortex,argparse,logging,joblib
 import numpy as np
 from config.dir import DATA_DIR, EM_DATA_DIR,RESULTS_DATA_DIR,FEATURE_DATA_DIR
 from sklearn.preprocessing import StandardScaler
-from himalaya.kernel_ridge import KernelRidgeCV
+from himalaya.kernel_ridge import KernelRidgeCV,WeightedKernelRidge
 from himalaya.backend import set_backend
 from voxelwise_tutorials.delayer import Delayer
 from sklearn.pipeline import make_pipeline
@@ -133,7 +133,8 @@ def save_model(pipeline,subj,sess,target,model):
     check_dir(directory)
     if check_file(os.path.join(directory,file_name)):
         file_name = subj+"_"+target+'_'+sess+model+'_model_1.pkl'
-    joblib.dump(pipeline, os.path.join(directory,file_name), compress=True) 
+    #joblib.dump(pipeline, os.path.join(directory,file_name), compress=True) 
+
     return directory
 
 def train_model(subj,sess,X_train,Y_train,model):
@@ -162,6 +163,8 @@ def train_model(subj,sess,X_train,Y_train,model):
         solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
                            n_targets_batch_refit=100)),
     )
+
+
     _ = pipeline.fit(X_train, Y_train)
 
     return pipeline,alphas,backend
@@ -400,19 +403,24 @@ if __name__ == "__main__":
         save_predict(pipeline,X_train ,X_test,dir)
         scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test,Y_test)
         save_rscore(dir,Y_train,Y_test)
-        save_histogram("Train Data",scores_train,dir)
-        save_histogram("Test Data",scores_test,dir)
-        save_cortex("Train Data",target,scores_train,dir,model)
-        save_cortex("Test Data",target,scores_test,dir,model)
-        plot_alphas(backend,dir,alphas)
-        plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
+        primal_coef=get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess)
+        #save_histogram("Train Data",scores_train,dir)
+        #save_histogram("Test Data",scores_test,dir)
+        #save_cortex("Train Data",target,scores_train,dir,model)
+        #save_cortex("Test Data",target,scores_test,dir,model)
+        #plot_alphas(backend,dir,alphas)
+        #plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
 
     elif check_file(os.path.join(get_model_filename_dir(subjs,sess,target,model)[1],get_model_filename_dir(subjs,sess,target,model)[0])):
         print("Loading existing model...")
         pipeline,dir,backend = load_model(subjs,sess,target,model)
         scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test,Y_test)
-        save_rscore(dir,Y_train,Y_test)
-        plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
+        #save_rscore(dir,Y_train,Y_test)
+                #save_histogram("Train Data",scores_train,dir)
+        save_histogram("Test Data",scores_test,dir)
+        save_cortex("Train Data",target,scores_train,dir,model)
+        save_cortex("Test Data",target,scores_test,dir,model)
+        #plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
 
     else:
 
