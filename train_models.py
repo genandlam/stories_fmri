@@ -231,8 +231,8 @@ def save_cortex(title,subj,scores,dir,model):
     xfm = subject+'_auto'
     # First create example voxel data for this subject and transform
     voxel_data = scores 
-    voxel_vol = cortex.Volume(voxel_data, subject, xfm,vmin=0,cmap="inferno")
-
+    voxel_vol = cortex.Volume(voxel_data, subject, xfm,vmin=0,cmap="inferno", vmax=0.25)
+ 
     # Then we have to get a mapper from voxels to vertices for this transform
     mapper = cortex.get_mapper(subject, xfm, 'line_nearest', recache=True)
 
@@ -415,15 +415,14 @@ if __name__ == "__main__":
         print("Loading existing model...")
         pipeline,dir,backend = load_model(subjs,sess,target,model)
         scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test,Y_test)
-        #save_rscore(dir,Y_train,Y_test)
-                #save_histogram("Train Data",scores_train,dir)
+
+        
+    else:
+        # getting existing scores to plot histograms and cortex
+        file_name,dir=get_model_filename_dir(subjs,sess,target,model)
+        scores_train = np.load(os.path.join(dir,'scores_train.npy'))
+        scores_test = np.load(os.path.join(dir,'scores_test.npy'))
+        save_histogram("Train Data",scores_train,dir)
         save_histogram("Test Data",scores_test,dir)
         save_cortex("Train Data",target,scores_train,dir,model)
         save_cortex("Test Data",target,scores_test,dir,model)
-        #plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
-
-    else:
-
-        pipeline,alphas,backend  = train_model(subjs,sess,X_train,Y_train,model) 
-        save_predict(pipeline,X_train ,X_test,dir,False)
-        print(f'Trained Data shapes: X_train: {X_train.shape}, X_test: {X_test.shape}')
