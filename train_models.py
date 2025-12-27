@@ -95,7 +95,6 @@ def select_voxels(subj,sess,save_voxel,threshold,model,target):
         X_train,X_test = save_predict(pipeline,X_train,X_test,dir,Y_No=False)
         X_train= backend.to_numpy(X_train)
         X_test= backend.to_numpy(X_test)
-        #X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
         
     elif model == "converted_same":
 
@@ -106,7 +105,6 @@ def select_voxels(subj,sess,save_voxel,threshold,model,target):
     X_train = zscore_runs(X_train, run_onsets)
     _,X_test=check_mean_sf(X_train,X_test)
     X_train = np.nan_to_num(X_train)
-    X_test = np.nan_to_num(X_test)
 
     if check_file(os.path.join(RESULTS_DATA_DIR,subj,save_voxel,'semantic_model/best_voxels.npy')) == False:
         scores_train = open_npy(subj,save_voxel,'semantic_model/scores_train.npy',dir=RESULTS_DATA_DIR)
@@ -163,7 +161,6 @@ def train_model(subj,sess,X_train,Y_train,model):
         solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
                            n_targets_batch_refit=100)),
     )
-
 
     _ = pipeline.fit(X_train, Y_train)
 
@@ -231,7 +228,7 @@ def save_cortex(title,subj,scores,dir,model):
     xfm = subject+'_auto'
     # First create example voxel data for this subject and transform
     voxel_data = scores 
-    voxel_vol = cortex.Volume(voxel_data, subject, xfm,vmin=0,cmap="inferno", vmax=0.25)
+    voxel_vol = cortex.Volume(voxel_data, subject, xfm,vmin=0,cmap="inferno")
  
     # Then we have to get a mapper from voxels to vertices for this transform
     mapper = cortex.get_mapper(subject, xfm, 'line_nearest', recache=True)
@@ -415,7 +412,6 @@ if __name__ == "__main__":
         print("Loading existing model...")
         pipeline,dir,backend = load_model(subjs,sess,target,model)
         scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test,Y_test)
-
         
     else:
         # getting existing scores to plot histograms and cortex
