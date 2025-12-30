@@ -46,15 +46,15 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
 5. Semantic model
     ```
-    $ python train_models.py --subject sub-UTS02 --target sub-UTS02 --sessions 1a --model semantic --savemodel True
+    $ python train_models.py --subject sub-UTS02 --target sub-UTS02 --sessions 1a --model semantic --mode savemodel
     ```
 6. Converter model
     ```
-    $ python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converter --savemodel True
+    $ python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converter --mode savemodel
     ```
 7. Converted model
     ```
-    $ python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converted --savemodel True
+    $ python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1a --model converted --mode savemodel
     ```
 8. Compare models
     ```
@@ -72,15 +72,15 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
 5a. Semantic model
     ```
-    $ for i in {1..27..2} ; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS02 --target sub-UTS02 --sessions $i$j --model semantic --savemodel True; done; done;
+    $ for i in {1..27..2} ; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS02 --target sub-UTS02 --sessions $i$j --model semantic --mode savemodel; done; done;
     ```
 6a. Converter model
     ```
-   $ for i in {1..27..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converter --savemodel True ; done; done;
+   $ for i in {1..27..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converter --mode savemodel ; done; done;
     ```
 7a. Converted model
     ```
-   $ for i in {1..27..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converted --savemodel True ; done; done;
+   $ for i in {1..27..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converted --mode savemodel ; done; done;
     ```
 
 

@@ -223,6 +223,7 @@ def set_pycortex_store(filestore):
     print(f"pycortex store set to {filestore}")
 
 def save_cortex(title,subj,scores,dir,model):
+
     set_pycortex_store(os.path.join(DATA_DIR, 'ds003020/derivative/pycortex-db'))
     subject = subj.split('-')[1]
     xfm = subject+'_auto'
@@ -263,25 +264,29 @@ def print_voxel_words_pca(voxnum,components):
     print ("Best words for voxel %d :" % (voxnum))
     print(voxwords)
 
-def compare_hist(dir,subjs,model,scores,target):
-    dir1,_=get_model_filename_dir(target,sess,target,'semantic')
-    scores_baseline= np.load(os.path.join(dir1,'scores_test'+'.npy'))
-    ax = plot_hist2d(scores_baseline, scores,vmin=-0.2, vmax=0.4)
-    ax.set(title='Generalization R2 scores', ylabel='Baseline model',
-        xlabel='Transform model')
-    plt.savefig(os.path.join(dir,subjs,model+'_model_hist_compare.png'))
+def compare_hist(dir,subjs,model,scores,target,sess,sess_com='7a'):
 
-def compare_heatmap(dir,subjs,model,scores,target):
-    dir1,_=get_model_filename_dir(target,sess,target,'semantic')
-    scores_baseline= np.load(os.path.join(dir1,'scores_test'+'.npy'))
+    _,dir_1=get_model_filename_dir(subjs,sess_com,target,model)
+    scores_com= np.load(os.path.join(dir_1,'scores_test.npy'))
+    ax = plot_hist2d(scores_com, scores,vmin=-0.1, vmax=0.4)
+    ax.set(title='Comparison of '+model+' '+sess+' & '+sess_com+' R2 scores', ylabel=sess+' model',
+        xlabel=sess_com+' model')
+    print(min(scores_com),min(scores))
+    print(max(scores_com),max(scores))
+    plt.savefig(os.path.join(dir,subjs+model+'_model_hist_compare.png'))
+
+def compare_heatmap(dir,subjs,model,scores,target,sess,sess_com='7a'):
+    
+    _,dir_1=get_model_filename_dir(subjs,sess_com,target,model)
+    scores_com= np.load(os.path.join(dir_1,'scores_test.npy'))
     subject = 'UTS02'
     xfm = 'UTS02_auto'
-    vol_data = cortex.Volume2D(scores_baseline, scores, subject, xfm,
-                            #cmap="GreenWhiteBlue_2D",
-                            vmin=0,vmin2=0, vmax=0.2, vmax2=0.2
-                            )
+    set_pycortex_store(os.path.join(DATA_DIR, 'ds003020/derivative/pycortex-db'))
+    vol_data = cortex.Volume2D(scores_com, scores, subject, xfm,
+                            vmin=0,vmin2=0, 
+                             vmax=0.2, vmax2=0.2 )
     cortex.quickshow(vol_data, with_rois=False )# with_colorbar=False,
-    plt.savefig(os.path.join(dir,subjs,model+'_model_voxel_compare.png'))
+    plt.savefig(os.path.join(dir,subjs+model+'_model_voxel_compare.png'))
 
 def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
 
@@ -318,7 +323,7 @@ def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
 def plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess):
 
     primal_coef=get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess)
-    set_pycortex_store(os.path.join(DATA_DIR, 'ds003020/derivative/pycortex-db'))
+    set_pycortex_store(os.path.join(DATA_DIR,'ds003020/derivative/pycortex-db'))
     # perform PCA on the voxel coefficients
     components,pca =pca_com(primal_coef)
     # transform with the fitted PCA
@@ -349,7 +354,7 @@ if __name__ == "__main__":
     parser.add_argument("--target", type=str, required=True)
     parser.add_argument("--sessions", nargs='+', type=str, required=True)
     parser.add_argument("--model", choices=['converter', 'converted','converted_same','semantic'], required=True, help='Select model type.')
-    parser.add_argument("--savemodel", type=bool, default=False)
+    parser.add_argument("--mode", choices=['savemodel', 'saveimg'], help='Select mode.')
     parser.add_argument("--threshold", type=int, default=10000)
     parser.add_argument("--save_voxel", type=str, default='27a', help='Session name where to save/load best voxels.')
     logging.basicConfig(level=logging.INFO)
@@ -362,6 +367,20 @@ if __name__ == "__main__":
     sess = '_'.join(sessions)
     subjs = '_'.join(subject)
     
+    if mode == "saveimg":
+
+        file_name,dir=get_model_filename_dir(subjs,sess,target,model)
+        #scores_train = np.load(os.path.join(dir,'scores_train.npy'))
+        scores_test = np.load(os.path.join(dir,'scores_test.npy'))
+        #save_histogram("Train Data",scores_train,dir)
+        #save_histogram("Test Data",scores_test,dir)
+        #save_cortex("Train Data",target,scores_train,dir,model)
+    #    save_cortex("Test Data",target,scores_test,dir,model)
+        compare_hist(dir,subjs,model,scores_test,target,sess)
+        compare_heatmap(dir,subjs,model,scores_test,target,sess)
+    #    plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
+        exit()
+
     Y_train = open_json(target,sess,'fmri_train.json') # (n_train_stories, n_voxels)
     Y_test = open_json(target,sess,'fmri_test.json') # (n_test_stories, n_voxels)
     run_onsets = create_run_on_set(subjs,sess)
@@ -392,7 +411,7 @@ if __name__ == "__main__":
         Y_test = y_test
         Y_train = y_train
 
-    if savemodel == True:
+    if mode == "savemodel":
 
         pipeline,alphas,backend = train_model(subjs,sess,X_train,Y_train,model)
         dir = save_model(pipeline,subjs,sess,target,model)
@@ -401,9 +420,8 @@ if __name__ == "__main__":
         scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test,Y_test)
         save_rscore(dir,Y_train,Y_test)
         primal_coef=get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess)
-        #save_histogram("Train Data",scores_train,dir)
+        
         #save_histogram("Test Data",scores_test,dir)
-        #save_cortex("Train Data",target,scores_train,dir,model)
         #save_cortex("Test Data",target,scores_test,dir,model)
         #plot_alphas(backend,dir,alphas)
         #plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
@@ -413,12 +431,4 @@ if __name__ == "__main__":
         pipeline,dir,backend = load_model(subjs,sess,target,model)
         scores_test,scores_train=save_scores(pipeline,backend,X_train,Y_train,X_test,Y_test)
         
-    else:
-        # getting existing scores to plot histograms and cortex
-        file_name,dir=get_model_filename_dir(subjs,sess,target,model)
-        scores_train = np.load(os.path.join(dir,'scores_train.npy'))
-        scores_test = np.load(os.path.join(dir,'scores_test.npy'))
-        save_histogram("Train Data",scores_train,dir)
-        save_histogram("Test Data",scores_test,dir)
-        save_cortex("Train Data",target,scores_train,dir,model)
-        save_cortex("Test Data",target,scores_test,dir,model)
+
