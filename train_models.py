@@ -356,7 +356,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", choices=['converter', 'converted','converted_same','semantic'], required=True, help='Select model type.')
     parser.add_argument("--mode", choices=['savemodel', 'saveimg'], help='Select mode.')
     parser.add_argument("--threshold", type=int, default=10000)
-    parser.add_argument("--save_voxel", type=str, default='27a', help='Session name where to save/load best voxels.')
+    parser.add_argument("--save_voxel", type=str, default='7a', help='Session name where to save/load best voxels.')
     logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
     globals().update(args.__dict__)
@@ -370,11 +370,9 @@ if __name__ == "__main__":
     if mode == "saveimg":
 
         file_name,dir=get_model_filename_dir(subjs,sess,target,model)
-        #scores_train = np.load(os.path.join(dir,'scores_train.npy'))
         scores_test = np.load(os.path.join(dir,'scores_test.npy'))
-        #save_histogram("Train Data",scores_train,dir)
+        #plot_alphas(backend,dir,alphas)
         #save_histogram("Test Data",scores_test,dir)
-        #save_cortex("Train Data",target,scores_train,dir,model)
     #    save_cortex("Test Data",target,scores_test,dir,model)
         compare_hist(dir,subjs,model,scores_test,target,sess)
         compare_heatmap(dir,subjs,model,scores_test,target,sess)
@@ -421,9 +419,6 @@ if __name__ == "__main__":
         save_rscore(dir,Y_train,Y_test)
         primal_coef=get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess)
         
-        #save_histogram("Test Data",scores_test,dir)
-        #save_cortex("Test Data",target,scores_test,dir,model)
-        #plot_alphas(backend,dir,alphas)
         #plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
 
     elif check_file(os.path.join(get_model_filename_dir(subjs,sess,target,model)[1],get_model_filename_dir(subjs,sess,target,model)[0])):

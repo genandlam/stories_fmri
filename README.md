@@ -82,5 +82,3 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
    $ for i in {1..27..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converted --mode savemodel ; done; done;
     ```
-
-
