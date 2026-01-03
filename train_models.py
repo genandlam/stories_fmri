@@ -264,20 +264,20 @@ def print_voxel_words_pca(voxnum,components):
     print ("Best words for voxel %d :" % (voxnum))
     print(voxwords)
 
-def compare_hist(dir,subjs,model,scores,target,sess,sess_com='7a'):
+def compare_hist(dir,subjs,model,scores,target,sess,save_voxel):
 
-    _,dir_1=get_model_filename_dir(subjs,sess_com,target,model)
+    _,dir_1=get_model_filename_dir(subjs,save_voxel,target,model)
     scores_com= np.load(os.path.join(dir_1,'scores_test.npy'))
     ax = plot_hist2d(scores_com, scores,vmin=-0.1, vmax=0.4)
-    ax.set(title='Comparison of '+model+' '+sess+' & '+sess_com+' R2 scores', ylabel=sess+' model',
-        xlabel=sess_com+' model')
+    ax.set(title='Comparison of '+model+' '+sess+' & '+save_voxel+' R2 scores', ylabel=sess+' model',
+        xlabel=save_voxel+' model')
     print(min(scores_com),min(scores))
     print(max(scores_com),max(scores))
     plt.savefig(os.path.join(dir,subjs+model+'_model_hist_compare.png'))
 
-def compare_heatmap(dir,subjs,model,scores,target,sess,sess_com='7a'):
-    
-    _,dir_1=get_model_filename_dir(subjs,sess_com,target,model)
+def compare_heatmap(dir,subjs,model,scores,target,save_voxel):
+
+    _,dir_1=get_model_filename_dir(subjs,save_voxel,target,model)
     scores_com= np.load(os.path.join(dir_1,'scores_test.npy'))
     subject = 'UTS02'
     xfm = 'UTS02_auto'
@@ -371,11 +371,11 @@ if __name__ == "__main__":
 
         file_name,dir=get_model_filename_dir(subjs,sess,target,model)
         scores_test = np.load(os.path.join(dir,'scores_test.npy'))
+        compare_hist(dir,subjs,model,scores_test,target,sess,save_voxel)
+        compare_heatmap(dir,subjs,model,scores_test,target,save_voxel)
         #plot_alphas(backend,dir,alphas)
         #save_histogram("Test Data",scores_test,dir)
     #    save_cortex("Test Data",target,scores_test,dir,model)
-        compare_hist(dir,subjs,model,scores_test,target,sess)
-        compare_heatmap(dir,subjs,model,scores_test,target,sess)
     #    plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
         exit()
 
@@ -385,6 +385,7 @@ if __name__ == "__main__":
     Y_train = zscore_runs(Y_train, run_onsets)
     _,Y_test=check_mean_sf(Y_train,Y_test)
     Y_train = np.nan_to_num(Y_train)
+    
     if model == "semantic":
 
         print("Semantic model selected ...")
