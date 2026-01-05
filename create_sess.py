@@ -4,96 +4,10 @@ import random
 import argparse
 import logging
 import os
+from turtle import mode
 import numpy as np
-from config.dir import  EM_DATA_DIR
-# Available objects to create combinations from
-
-available_objects = [
-
-    "exorcism",
-    "fromboyhoodtofatherhood",
-    "sloth",
-    "stagefright",
-    "tildeath",
-    "adollshouse",
-    "adventuresinsayingyes",
-    "buck",
-    "haveyoumethimyet",
-    "inamoment",
-    "theclosetthatateeverything",
-    "eyespy",
-    "hangtime",
-    "itsabox",
-    "swimmingwithastronauts",
-    "thatthingonmyarm",
-    "breakingupintheageofgoogle",
-    "onlyonewaytofindout",
-    "penpal",
-    "shoppinginchina",
-    "treasureisland",
-    "backsideofthestorm",
-    "goingthelibertyway",
-    "kiksuya",
-    "sweetaspie",
-    "thepostmanalwayscalls",
-    "thetiniestbouquet",
-    "becomingindian",
-    "lifeanddeathontheoregontrail",
-    "thefreedomridersandme",
-    "thumbsup",
-    "waitingtogo",
-    "catfishingstrangerstofindmyself",
-    "christmas1940",
-    "gpsformylostidentity",
-    "singlewomanseekingmanwich",
-    "superheroesjustforeachother",
-    "whenmothersbullyback",
-    "againstthewind",
-    "bluehope",
-    "forgettingfear",
-    "ifthishaircouldtalk",
-    "lifereimagined",
-    "stumblinginthedark",
-    "cocoonoflove",
-    "comingofageondeathrow",
-    "goldiethegoldfish",
-    "leavingbaghdad",
-    "quietfire",
-    "alternateithicatom",
-    "avatar",
-    "howtodraw",
-    "legacy",
-    "life",
-    "myfirstdaywiththeyankees",
-    "naked",
-    "odetostepfather",
-    "souls",
-    "undertheinfluence",
-    "afatherscover",
-    "food",
-    "mybackseatviewofagreatromance",
-    "notontheusualtour",
-    "reachingoutbetweenthebars",
-    "wildwomenanddancingqueens",
-    "beneaththemushroomcloud",
-    "gangstersandcookies",
-    "golfclubbing",
-    "metsmagic",
-    "threemonths",
-    "vixenandtheussr",
-    "birthofanation",
-    "firetestforlove",
-    "listo",
-    "myfathershands",
-    "theadvancedbeginner",
-    "theshower",           
-    "cautioneating",
-    "jugglingandjesus",
-    "mayorofthefreaks",
-    "thecurse",
-    "theinterview",
-    "thetriangleshirtwaistconnection"
-]
+from config.dir import EM_DATA_DIR
+import csv
 
 # The constant second element
 constant_element = "wheretheressmoke"
@@ -131,7 +45,7 @@ def find_non_subset_triplets(combinations):
         valid_triplets.append(combo_list)
         return valid_triplets # Return after finding the first valid triplet
 
-def generate_json_objects(sizeobj,nolist):
+def generate_json_objects(sizeobj,nolist,available_objects):
         """
         Generate JSON objects with combinations of available objects
         """
@@ -147,7 +61,7 @@ def generate_json_objects(sizeobj,nolist):
             combinations = [[obj] for obj in limit_object]
             
         elif sizeobj >= 2:
-        # Generate all combinations of size sizeobj
+            # Generate all combinations of size sizeobj
             combinations = np.array_split(limit_object, len(limit_object) // sizeobj)
             combinations = [arr.tolist() for arr in combinations]
             
@@ -166,19 +80,32 @@ def generate_json_objects(sizeobj,nolist):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--sizeobj", type=int, default=1)
-    parser.add_argument("--nolist", type=int, default=3)
+    parser.add_argument("--sizeobj", help="Size of objects (sess)", type=int, default=1)
+    parser.add_argument("--nolist", help="Number of stories within list ", type=int, default=3)
+    parser.add_argument("--mode", choices=['27', '6'], help='Select mode.', default=6)
 
     logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
     globals().update(args.__dict__)
     # Set random seed for reproducibility (remove this line for different results each time)
-    random.seed(42)
+    if mode == '27':
+        avail_file = f"create_27.csv"
+        filename = f"sess_{sizeobj}"
+    else:
+        avail_file = f"create_6.csv"
+        filename = f"sess_{sizeobj}_6"
+
+    with open(os.path.join(EM_DATA_DIR,f"{avail_file}"), newline='') as csv_file:
+        csv_read=csv.reader(csv_file)
+        available_objects=[item for row in csv_read for item in row if item]
+    
+    #random.seed(42)
     # Generate the JSON objects
-    json_objects = generate_json_objects(sizeobj,nolist)
+    json_objects = generate_json_objects(sizeobj,nolist,available_objects)
+
     # Save to file
 
-    with open(os.path.join(EM_DATA_DIR,f"sess_{sizeobj}.json"), 'w', encoding='utf-8') as f:
+    with open(os.path.join(EM_DATA_DIR,f"{filename}.json"), 'w', encoding='utf-8') as f:
         json.dump(json_objects, f, indent=4, ensure_ascii=False)
 
     print("JSON objects generated successfully!")
