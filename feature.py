@@ -121,25 +121,30 @@ if __name__ == "__main__":
 	parser.add_argument("--feature", type=str, default="eng1000")
 	parser.add_argument("--sessions", nargs='+', type=str, required=True)
 	parser.add_argument("--stories", type=int, default=1)
+	parser.add_argument("--mode", choices=['27', '6'], help='Select mode.', default=6)
 	logging.basicConfig(level=logging.INFO)
-
 	args = parser.parse_args()
 	globals().update(args.__dict__)
 	assert len(subject) <= 2 and len(subject) >=1, "1 <= subjects <= 2"
 	subject = list(map(str, subject))
 	sessions = list(map(str, sessions))
 	s = '_'.join(sessions)
+	if mode == '27':
+		filename = ""
+	else:
+		filename = "_6"
+
 	if len(subject) > 1:
 		remove = 1
 		subjects = '_'.join(subject)
-		save_location = os.path.join(REPO_DIR, "feature",feature, subjects,s)
+		save_location = os.path.join(REPO_DIR, "feature"+filename,feature, subjects,s)
 	else:
 		remove = None
-		save_location = os.path.join(REPO_DIR, "feature",feature, subject[0],s)
+		save_location = os.path.join(REPO_DIR, "feature"+filename,feature, subject[0],s)
 	os.makedirs(save_location, exist_ok=True)
 	if len(sessions) == 1:
 		print("File :",sessions[0][:-1])
-		with open(os.path.join(EM_DATA_DIR, f"sess_{sessions[0][:-1]}.json"), "r") as f:
+		with open(os.path.join(EM_DATA_DIR, f"sess_{sessions[0][:-1]}{filename}.json"), "r") as f:
 			sess_to_story = json.load(f)
 	
 	train_stories, test_stories = [], []
@@ -151,39 +156,47 @@ if __name__ == "__main__":
 	assert len(set(train_stories) & set(test_stories)) == 0, "Train - Test overlap!"
 	allstories = list(set(train_stories) | set(test_stories))
 
-	downsampled_feat = get_feature_space(feature, allstories)
-	delRstim = apply_zscore_and_hrf(train_stories, downsampled_feat, trim)
-	delTest = apply_zscore_and_hrf(test_stories, downsampled_feat, trim)
-	print('Stimulus trainset:',delRstim.shape)
-	print('Stimulus testset:',delTest.shape)
-
 	# Response
 	if remove is not None:
-		zRresp,run_on_set = get_response(train_stories, subject[0],remove=remove)
-		zRresp_2,run_on_set = get_response(train_stories, subject[1],run_on_set,remove=remove)
+		for i in range(0, len(subject)):
+			if i == 0:
+				_,run_on_set = get_response(train_stories, subject[i],remove=remove)
+			else:
+				_,run_on_set = get_response(train_stories, subject[i],run_on_set,remove=remove)
+		
 		run_on_set = run_on_set[:-1]
+		# do not need zRresp only run on set
 	else:
+		
+		downsampled_feat = get_feature_space(feature, allstories)
+		delRstim = apply_zscore_and_hrf(train_stories, downsampled_feat, trim)
+		delTest = apply_zscore_and_hrf(test_stories, downsampled_feat, trim)
+		print('Stimulus trainset:',delRstim.shape)
+		print('Stimulus testset:',delTest.shape)
+
+		test_resp,_ = get_response(test_stories, subject[0])
+		print("zRresp Test: ", test_resp.shape)
+		
 		zRresp,run_on_set = get_response(train_stories, subject[0])
-	print("zRresp: ", zRresp.shape)
+		print("zRresp: ", zRresp.shape)
+
 	print("length of run_on_set:", len(run_on_set), "with values:", run_on_set)
 
-	test_resp,_ = get_response(test_stories, subject[0])
-	print("zRresp Test: ", test_resp.shape)
-
 	print("Saving features to:", save_location)
-
 	with open(save_location+'/run_on.json', "w") as file:
 		json.dump(run_on_set,file, indent=4)
+	
+	if remove == None:
 
-	with open(save_location+'/fmri_train.json', "w") as file:
-		json.dump(convert_to_serializable(zRresp),file, indent=4)
-	with open(save_location+'/features_train.json', "w") as file:
-		json.dump(convert_to_serializable(delRstim),file, indent=4)
+		with open(save_location+'/fmri_train.json', "w") as file:
+			json.dump(convert_to_serializable(zRresp),file, indent=4)
+		with open(save_location+'/features_train.json', "w") as file:
+			json.dump(convert_to_serializable(delRstim),file, indent=4)
 
-	with open(save_location+'/features_test.json', "w") as file:
-		json.dump(convert_to_serializable(delTest),file, indent=4)
-	with open(save_location+'/fmri_test.json', "w") as file:
-		json.dump(convert_to_serializable(test_resp),file, indent=4)
+		with open(save_location+'/features_test.json', "w") as file:
+			json.dump(convert_to_serializable(delTest),file, indent=4)
+		with open(save_location+'/fmri_test.json', "w") as file:
+			json.dump(convert_to_serializable(test_resp),file, indent=4)
 
 
 

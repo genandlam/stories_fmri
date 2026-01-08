@@ -1,6 +1,6 @@
 import os,json,cortex,argparse,logging,joblib
 import numpy as np
-from config.dir import DATA_DIR, EM_DATA_DIR,RESULTS_DATA_DIR,FEATURE_DATA_DIR
+from config.dir import DATA_DIR, EM_DATA_DIR,RESULTS_DATA_DIR,FEATURE_DATA_DIR,FEATURE_DATA_DIR_6
 from sklearn.preprocessing import StandardScaler
 from himalaya.kernel_ridge import KernelRidgeCV,WeightedKernelRidge
 from himalaya.backend import set_backend
@@ -68,10 +68,10 @@ def check_mean_sf(X_train,X_test):
 
     return X_train,X_test
 
-def semantic_features(subject,sess):
+def semantic_features(subject,sess,FEATURE_DIR):
         
-        X_train = open_json(subject,sess,'features_train.json')
-        X_test = open_json(subject,sess,'features_test.json')
+        X_train = open_json(subject,sess,'features_train.json',FEATURE_DIR)
+        X_test = open_json(subject,sess,'features_test.json',FEATURE_DIR)
         print("(n_samples_train, n_features) =", X_train.shape)
         print("(n_samples_test, n_features) =", X_test.shape)
         X_train,X_test=check_mean_sf(X_train,X_test)
@@ -79,19 +79,19 @@ def semantic_features(subject,sess):
         return X_train,X_test
 
 
-def select_voxels(subj,sess,save_voxel,threshold,model,target):
+def select_voxels(subj,sess,save_voxel,threshold,model,target,FEATURE_DIR):
 # fmri -> fmri 
     if model == "converter":
-        X_train = open_json(subj,sess,'fmri_train.json')
+        X_train = open_json(subj,sess,'fmri_train.json',FEATURE_DIR)
         X_test = open_npy(subj,save_voxel,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
 
     elif model == "converter_same":
-        X_train = open_json(subj,sess,'fmri_train.json')
+        X_train = open_json(subj,sess,'fmri_train.json',FEATURE_DIR)
         X_test = open_npy(subj,sess,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
 
     elif model == "converted":
         pipeline,dir,backend = load_model(subj,save_voxel,target,"semantic")
-        X_train,X_test = semantic_features(subj,sess)
+        X_train,X_test = semantic_features(subj,sess,FEATURE_DIR)
         X_train,X_test = save_predict(pipeline,X_train,X_test,dir,Y_No=False)
         X_train= backend.to_numpy(X_train)
         X_test= backend.to_numpy(X_test)
@@ -101,7 +101,7 @@ def select_voxels(subj,sess,save_voxel,threshold,model,target):
         X_train = open_npy(subj,sess,'semantic_model/train_predict.npy',dir=RESULTS_DATA_DIR)
         X_test = open_npy(subj,sess,'semantic_model/test_predict.npy',dir=RESULTS_DATA_DIR)
 
-    run_onsets = create_run_on_set(subj,sess)
+    run_onsets = create_run_on_set(subj,sess,FEATURE_DIR)
     X_train = zscore_runs(X_train, run_onsets)
     _,X_test=check_mean_sf(X_train,X_test)
     X_train = np.nan_to_num(X_train)
@@ -119,9 +119,9 @@ def select_voxels(subj,sess,save_voxel,threshold,model,target):
 
     return X_train[:, best_voxels],X_test[:, best_voxels]
 
-def create_run_on_set(subj,sess):
+def create_run_on_set(subj,sess,FEATURE_DIR):
 
-    run_onsets=open_json(subj,sess,'run_on.json')
+    run_onsets=open_json(subj,sess,'run_on.json',FEATURE_DIR)
     run_onsets=list(map(int, run_onsets))
     return run_onsets
 
@@ -135,8 +135,8 @@ def save_model(pipeline,subj,sess,target,model):
 
     return directory
 
-def train_model(subj,sess,X_train,Y_train,model):
-    run_onsets= create_run_on_set(subj,sess)
+def train_model(subj,sess,X_train,Y_train,model,FEATURE_DIR):
+    run_onsets= create_run_on_set(subj,sess,FEATURE_DIR)
     if len(run_onsets) > 1 : 
         n_samples_train = X_train.shape[0]
         cv = generate_leave_one_run_out(n_samples_train, run_onsets)
@@ -355,18 +355,21 @@ if __name__ == "__main__":
     parser.add_argument("--sessions", nargs='+', type=str, required=True)
     parser.add_argument("--model", choices=['converter', 'converted','converted_same','semantic'], required=True, help='Select model type.')
     parser.add_argument("--mode", choices=['savemodel', 'saveimg'], help='Select mode.')
+    parser.add_argument("--feature", choices=['27', '6'], help='Select feature type.', default=6)
     parser.add_argument("--threshold", type=int, default=10000)
     parser.add_argument("--save_voxel", type=str, default='7a', help='Session name where to save/load best voxels.')
     logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
     globals().update(args.__dict__)
-    assert len(subject) <= 2 and len(subject) >=1, "1 <= subjects <= 2"
-
+    assert len(subject) <= 3 and len(subject) >=1, "1 <= subjects <= 3"
     sessions = list(map(str, sessions))
     subject = list(map(str, subject))
     sess = '_'.join(sessions)
     subjs = '_'.join(subject)
-    
+    if feature == '27':
+        FEATURE_DIR= FEATURE_DATA_DIR
+    else:
+        FEATURE_DIR= FEATURE_DATA_DIR_6
     if mode == "saveimg":
 
         file_name,dir=get_model_filename_dir(subjs,sess,target,model)
@@ -379,9 +382,9 @@ if __name__ == "__main__":
     #    plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
         exit()
 
-    Y_train = open_json(target,sess,'fmri_train.json') # (n_train_stories, n_voxels)
-    Y_test = open_json(target,sess,'fmri_test.json') # (n_test_stories, n_voxels)
-    run_onsets = create_run_on_set(subjs,sess)
+    Y_train = open_json(target,sess,'fmri_train.json',FEATURE_DIR) # (n_train_stories, n_voxels)
+    Y_test = open_json(target,sess,'fmri_test.json',FEATURE_DIR) # (n_test_stories, n_voxels)
+    run_onsets = create_run_on_set(subjs,sess,FEATURE_DIR)
     Y_train = zscore_runs(Y_train, run_onsets)
     _,Y_test=check_mean_sf(Y_train,Y_test)
     Y_train = np.nan_to_num(Y_train)
@@ -389,7 +392,7 @@ if __name__ == "__main__":
     if model == "semantic":
 
         print("Semantic model selected ...")
-        X_train, X_test = semantic_features(subjs,sess)
+        X_train, X_test = semantic_features(subjs,sess,FEATURE_DIR)
 
     else:
 
@@ -399,8 +402,8 @@ if __name__ == "__main__":
         y_test = np.empty((0, Y_test.shape[1]))
         
         for i in range (len(subject)): 
- 
-            X_train_best,X_test_best= select_voxels(subject[i],sess,save_voxel,threshold,model,target)
+
+            X_train_best,X_test_best= select_voxels(subject[i],sess,save_voxel,threshold,model,target,FEATURE_DIR)
             X_train=np.vstack([X_train, X_train_best])
             X_test=np.vstack([X_test, X_test_best])
             y_train = np.vstack([y_train, Y_train])
@@ -412,7 +415,7 @@ if __name__ == "__main__":
 
     if mode == "savemodel":
 
-        pipeline,alphas,backend = train_model(subjs,sess,X_train,Y_train,model)
+        pipeline,alphas,backend = train_model(subjs,sess,X_train,Y_train,model,FEATURE_DIR)
         dir = save_model(pipeline,subjs,sess,target,model)
         print(f"Model saved in {dir}")
         save_predict(pipeline,X_train ,X_test,dir)
