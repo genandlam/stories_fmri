@@ -98,7 +98,7 @@ if __name__ == "__main__":
     with open(os.path.join(EM_DATA_DIR,f"{avail_file}"), newline='') as csv_file:
         csv_read=csv.reader(csv_file)
         available_objects=[item for row in csv_read for item in row if item]
-    
+    #print(*available_objects, sep=',')
     #random.seed(42)
     # Generate the JSON objects
     json_objects = generate_json_objects(sizeobj,nolist,available_objects)

@@ -1,4 +1,4 @@
-import os,json,argparse,logging,itertools
+import os,argparse,logging,itertools
 import numpy as np
 from config.dir import DATA_DIR, EM_DATA_DIR,RESULTS_DATA_DIR,FEATURE_DATA_DIR
 import matplotlib.pyplot as plt
@@ -84,25 +84,50 @@ def plot_r(sess_r_values,sess,subjs,target,model,name):
     plt.savefig(os.path.join(directory,f'mean_similarities_weights_{name}.png'))
     np.save(os.path.join(directory,name+"-values.npy"), sess_r_values)
     plt.close()
-    
+
+def plot_r(sess,subjs,target,model,name):
+
+    directory=os.path.join(RESULTS_DATA_DIR,subjs[0],sess+target,model+'_model')
+    for subj in subjs:
+        file = f'{model}_model/{name}-values.npy'
+        r_value =open_npy(subj,sess+target,file)
+        print("r values of ",subj,": ",r_value)
+        plt.plot(sess, r_value, label = subj)
+
+    plt.legend()
+    plt.xlabel('Number of training stories')
+    plt.ylabel(f'Mean similarities of estimated weights({name})')
+    plt.savefig(os.path.join(directory,f'compare_mean_similarities_weights_{name}.png'))
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--subject",  nargs='+', type=str, required=True)
     parser.add_argument("--target", type=str, required=True)
     parser.add_argument("--sessions", nargs='+', type=int, required=True)
-    parser.add_argument("--model", choices=['converter', 'converted','converted_same','semantic'], required=True, help='Select model type.')
-    parser.add_argument("--save_voxel", type=str, default='27a', help='Path to saved voxel selection.')
+    parser.add_argument("--model", choices=['converter','converted', 'semantic'], required=True, help='Select model type.')
+    parser.add_argument("--save_voxel", type=str, default='7a', help='Path to saved voxel selection.')
     parser.add_argument("--threshold", type=int, default=10000)
+    parser.add_argument("--mode", choices=['single', 'multi'], required=True, help='Select mode single/multi .')
     logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
     globals().update(args.__dict__)
 
-    assert len(subject) <= 2 and len(subject) >=1, "1 <= subjects <= 2"
+    assert len(subject) <= 3 and len(subject) >=1, "1 <= subjects <= 3"
     sessions = list(map(str, sessions))
     subject = list(map(str, subject))
     sess = '_'.join(sessions)
-    subjs = '_'.join(subject)
+    if mode == 'single':
+        subjs = '_'.join(subject)
+    else:
+        subjs = subject
+    if mode == 'multi':
+        
+        plot_r(sess,subjs,target,model,name="r")
+        #plot_r(sess,subjs,target,model,name="r2")
+        exit()
+
     dict_r_values ={}
     dict_r2_values ={}
     for j in sessions: 

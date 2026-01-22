@@ -58,7 +58,7 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
 8. Compare models
     ```
-    $ python compare.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1 --model converted
+    $ python compare.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1 --model converted --mode multi
     ```
 
 ## Extra 
@@ -68,7 +68,6 @@ This repository contains code and resources related to fMRI data analysis for na
 4a. Features
     ```
     $ for i in {1..27..2}; do for j in "a" "b" "c" ; do python feature.py --subject sub-UTS01 --feature eng1000 --sessions $i$j; done; done;
-
     ```
 5a. Semantic model
     ```
