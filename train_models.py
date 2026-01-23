@@ -265,22 +265,22 @@ def print_voxel_words_pca(voxnum,components):
     print(voxwords)
 
 def compare_hist(dir,subjs,model,scores,target,sess,save_voxel):
-
-    _,dir_1=get_model_filename_dir(subjs,save_voxel,target,model)
+    subjs2 ='sub-UTS02_sub-UTS03'
+    _,dir_1=get_model_filename_dir(subjs2,save_voxel,target,model)
     scores_com= np.load(os.path.join(dir_1,'scores_test.npy'))
     ax = plot_hist2d(scores_com, scores,vmin=-0.1, vmax=0.4)
-    ax.set(title='Comparison of '+model+' '+sess+' & '+save_voxel+' R2 scores', ylabel=sess+' model',
-        xlabel=save_voxel+' model')
+    ax.set(title='Comparison of '+model+' '+subjs+' & '+subjs2+' R2 scores', ylabel=subjs+' model',
+        xlabel=subjs2+' model')
     print(min(scores_com),min(scores))
     print(max(scores_com),max(scores))
     plt.savefig(os.path.join(dir,subjs+model+'_model_hist_compare.png'))
 
 def compare_heatmap(dir,subjs,model,scores,target,save_voxel):
-
-    _,dir_1=get_model_filename_dir(subjs,save_voxel,target,model)
+    subjs2 ='sub-UTS02_sub-UTS03'
+    _,dir_1=get_model_filename_dir(subjs2,save_voxel,target,model)
     scores_com= np.load(os.path.join(dir_1,'scores_test.npy'))
-    subject = 'UTS02'
-    xfm = 'UTS02_auto'
+    subject = target.split('-')[1]
+    xfm = subject+'_auto'
     set_pycortex_store(os.path.join(DATA_DIR, 'ds003020/derivative/pycortex-db'))
     vol_data = cortex.Volume2D(scores_com, scores, subject, xfm,
                             vmin=0,vmin2=0, 
@@ -292,6 +292,7 @@ def get_primal_coef(scores_test,pipeline,target,dir,backend,model,subjs,sess):
 
     rscore_test=np.load(os.path.join(dir,'rscore_test.npy'))
     primal_coef = backend.to_numpy(pipeline[-1].get_primal_coef())
+    primal_coef = np.where(primal_coef == 0, 1e-8, primal_coef) 
     primal_coef /= np.linalg.norm(primal_coef, axis=0)
     primal_coef_r2 = np.copy(primal_coef)
     primal_coef_r = np.copy(primal_coef)
@@ -377,8 +378,8 @@ if __name__ == "__main__":
         compare_hist(dir,subjs,model,scores_test,target,sess,save_voxel)
         compare_heatmap(dir,subjs,model,scores_test,target,save_voxel)
         #plot_alphas(backend,dir,alphas)
-        #save_histogram("Test Data",scores_test,dir)
-    #    save_cortex("Test Data",target,scores_test,dir,model)
+        save_histogram("Test Data",scores_test,dir)
+        save_cortex("Test Data",target,scores_test,dir,model)
     #    plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
         exit()
 

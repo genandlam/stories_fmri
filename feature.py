@@ -121,7 +121,7 @@ if __name__ == "__main__":
 	parser.add_argument("--feature", type=str, default="eng1000")
 	parser.add_argument("--sessions", nargs='+', type=str, required=True)
 	parser.add_argument("--stories", type=int, default=1)
-	parser.add_argument("--mode", choices=['27', '6'], help='Select mode.', default=6)
+	parser.add_argument("--mode", choices=['27','6', '7'], help='Select mode.', default='7')
 	logging.basicConfig(level=logging.INFO)
 	args = parser.parse_args()
 	globals().update(args.__dict__)
@@ -132,7 +132,7 @@ if __name__ == "__main__":
 	if mode == '27':
 		filename = ""
 	else:
-		filename = "_6"
+		filename = f"_{mode}"
 
 	if len(subject) > 1:
 		remove = 1

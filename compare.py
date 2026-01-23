@@ -41,6 +41,7 @@ def load_primal_coef(subjs,sess,target,model,save_voxel,threshold):
 
     return primal_coef_r2[:, best_voxels], primal_coef_r[:, best_voxels]
 
+
 def compute_r(weight,weight2,sess):
     """
     Compute pairwise Pearson correlations between weight maps for labels 'a','b','c'.
@@ -51,7 +52,6 @@ def compute_r(weight,weight2,sess):
     labels = ['a', 'b', 'c']
     r = []
     r2 =[]
-
     for i, j in itertools.combinations(labels, 2):
         key1 = f'{sess}{i}'
         key2 = f'{sess}{j}'
@@ -66,16 +66,16 @@ def compute_r(weight,weight2,sess):
         corr2= sklearn.metrics.r2_score(w1_2.ravel(), w2_2.ravel())
         r.append(corr)
         r2.append(corr2)
+    return float(np.mean(r)), float(np.mean(r2)), float(np.var(r)), float(np.var(r2))
 
-    
-    return float(np.mean(r)), float(np.mean(r2))
-
-def plot_r(sess_r_values,sess,subjs,target,model,name):
+def plot_r(sess_r_values,var,sess,subjs,target,model,name):
 
     x = np.array(list(sess_r_values.keys()))  # X-axis 
     y = list(sess_r_values.values()) # Y-axis
-
-    plt.plot(x, y)  
+    vars_r_values = np.linspace(var.values())
+    #plt.plot(x, y)  
+    plt.errorbar(x, y, yerr = vars_r_values,
+             fmt ='o')
     plt.xlabel('Number of training stories')
     plt.ylabel(f'Mean similarities of estimated weights({name})')
     directory=os.path.join(RESULTS_DATA_DIR,subjs,sess+target,model+'_model')
@@ -85,20 +85,22 @@ def plot_r(sess_r_values,sess,subjs,target,model,name):
     np.save(os.path.join(directory,name+"-values.npy"), sess_r_values)
     plt.close()
 
-def plot_r(sess,subjs,target,model,name):
+def plot_r2(sess,subjs,target,model,name):
 
     directory=os.path.join(RESULTS_DATA_DIR,subjs[0],sess+target,model+'_model')
     for subj in subjs:
         file = f'{model}_model/{name}-values.npy'
-        r_value =open_npy(subj,sess+target,file)
+        r_value = np.load(os.path.join(RESULTS_DATA_DIR,subj,sess+target,file), allow_pickle=True, encoding='latin1').tolist()
         print("r values of ",subj,": ",r_value)
-        plt.plot(sess, r_value, label = subj)
+        x = np.array(list(r_value.keys()))  # X-axis 
+        y = list(r_value.values()) # Y-axis
+        plt.plot(x, y, label = subj)
 
     plt.legend()
     plt.xlabel('Number of training stories')
     plt.ylabel(f'Mean similarities of estimated weights({name})')
     plt.savefig(os.path.join(directory,f'compare_mean_similarities_weights_{name}.png'))
-
+    plt.close()
 
 if __name__ == "__main__":
 
@@ -124,27 +126,36 @@ if __name__ == "__main__":
         subjs = subject
     if mode == 'multi':
         
-        plot_r(sess,subjs,target,model,name="r")
-        #plot_r(sess,subjs,target,model,name="r2")
+        plot_r2(sess,subjs,target,model,name="r")
+        plot_r2(sess,subjs,target,model,name="r2")
         exit()
 
     dict_r_values ={}
     dict_r2_values ={}
+    dict_vars_r_values ={}
+    dict_vars_r2_values ={}
     for j in sessions: 
 
         sess_r_values = []
         sess_r2_values = []
+        vars_r_values = []
+        vars_r2_values = []
         weight={}
         weight2={}
         for i in ['a','b','c']:
             primal_coef_r,primal_coef_r2 = load_primal_coef(subjs,j+i,target,model,save_voxel,threshold)
             weight[f'{j}{i}']=primal_coef_r
             weight2[f'{j}{i}']=primal_coef_r2
-        r_value,r2_value=compute_r(weight,weight2,j)
+        r_value,r2_value,r_vars_value,r2_vars_value=compute_r(weight,weight2,j)
         sess_r_values.append(r_value)
         sess_r2_values.append(r2_value)
+        vars_r_values.append(r_vars_value)
+        vars_r2_values.append(r2_vars_value)
         print("r values of j : ",sess_r_values)
         dict_r_values[j]=sess_r_values
         dict_r2_values[j]=sess_r2_values
-    plot_r(dict_r_values,sess,subjs,target,model,"r")
-    plot_r(dict_r2_values,sess,subjs,target,model,"r2")
+        dict_vars_r_values[j]=vars_r_values
+        dict_vars_r2_values[j]=vars_r2_values
+
+    plot_r(dict_r_values,dict_vars_r_values,sess,subjs,target,model,"r")
+    plot_r(dict_r2_values,dict_vars_r2_values,sess,subjs,target,model,"r2")

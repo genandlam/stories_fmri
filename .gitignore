@@ -2,6 +2,7 @@ config/*
 results/*
 feature/*
 feature_6/*
+feature*/*
 
 # Python specific
 __pycache__/

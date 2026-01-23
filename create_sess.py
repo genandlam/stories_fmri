@@ -45,7 +45,7 @@ def find_non_subset_triplets(combinations):
         valid_triplets.append(combo_list)
         return valid_triplets # Return after finding the first valid triplet
 
-def generate_json_objects(sizeobj,nolist,available_objects):
+def generate_json_objects(sizeobj,nolist,available_objects,mode):
         """
         Generate JSON objects with combinations of available objects
         """
@@ -63,11 +63,14 @@ def generate_json_objects(sizeobj,nolist,available_objects):
         elif sizeobj >= 2:
             # Generate all combinations of size sizeobj
             combinations = np.array_split(limit_object, len(limit_object) // sizeobj)
-            combinations = [arr.tolist() for arr in combinations]
-            
+            combinations = [arr.tolist() for arr in combinations]            
 
         # Find valid triplets for x-object combinations (xa, xb, xc)
         valid_triplets = find_non_subset_triplets(combinations)
+        if mode == str(sizeobj):
+            arr = np.array(valid_triplets)
+            arr_1d = arr.flatten()
+            np.savetxt(os.path.join(EM_DATA_DIR,f'create_{mode}_new.csv'), arr_1d, delimiter=',', fmt='%s')
         try:
             triplet = valid_triplets[0]  # Take the first valid triplet
             result[f"{sizeobj}a"] = [list(triplet[0]), constant_element]
@@ -82,29 +85,34 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--sizeobj", help="Size of objects (sess)", type=int, default=1)
     parser.add_argument("--nolist", help="Number of stories within list ", type=int, default=3)
-    parser.add_argument("--mode", choices=['27', '6'], help='Select mode.', default=6)
+    parser.add_argument("--mode", choices=['27', '7'], help='Select mode.', default='7')
 
     logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
     globals().update(args.__dict__)
     # Set random seed for reproducibility (remove this line for different results each time)
     if mode == '27':
-        avail_file = f"create_27.csv"
+        avail_file = f"create_27"
         filename = f"sess_{sizeobj}"
     else:
-        avail_file = f"create_6.csv"
-        filename = f"sess_{sizeobj}_6"
+        avail_file = f"create_{mode}"
+        filename = f"sess_{sizeobj}_{mode}"
 
-    with open(os.path.join(EM_DATA_DIR,f"{avail_file}"), newline='') as csv_file:
-        csv_read=csv.reader(csv_file)
-        available_objects=[item for row in csv_read for item in row if item]
+    if str(sizeobj) == mode:
+
+        with open(os.path.join(EM_DATA_DIR,f"{avail_file}.csv"), newline='') as csv_file:
+            csv_read=csv.reader(csv_file)
+            available_objects=[item for row in csv_read for item in row if item]
+    else:
+        loaded_arr = np.loadtxt(os.path.join(EM_DATA_DIR,f"{avail_file}_new.csv"), dtype=str)
+        available_objects = loaded_arr.tolist()
     #print(*available_objects, sep=',')
     #random.seed(42)
     # Generate the JSON objects
-    json_objects = generate_json_objects(sizeobj,nolist,available_objects)
+
+    json_objects = generate_json_objects(sizeobj,nolist,available_objects,mode)
 
     # Save to file
-
     with open(os.path.join(EM_DATA_DIR,f"{filename}.json"), 'w', encoding='utf-8') as f:
         json.dump(json_objects, f, indent=4, ensure_ascii=False)
 

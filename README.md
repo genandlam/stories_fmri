@@ -39,6 +39,8 @@ This repository contains code and resources related to fMRI data analysis for na
 3. Create each session stories
     ```
     $ python create_sess.py --sizeobj 3
+
+    $ for i in {1..5..2}; do python create_sess.py --sizeobj $i --mode 7; done;
     ```
 4. Features  
     ```
@@ -58,7 +60,8 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
 8. Compare models
     ```
-    $ python compare.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1 --model converted --mode multi
+    $ python compare.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1 --model converted --mode single
+    $ python compare.py --subject sub-UTS01_sub-UTS03 --target sub-UTS01 --sessions 1 3 5 7 --model converted --mode multi
     ```
 
 ## Extra 
@@ -79,5 +82,5 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
 7a. Converted model
     ```
-   $ for i in {1..27..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converted --mode savemodel ; done; done;
+   $ for i in {1..7..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS06 sub-UTS07 --target sub-UTS01 --sessions $i$j --model converted --mode savemodel ; done; done;
     ```
