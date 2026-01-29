@@ -1,6 +1,6 @@
 import os,json,cortex,argparse,logging,joblib
 import numpy as np
-from config.dir import DATA_DIR, EM_DATA_DIR,RESULTS_DATA_DIR,FEATURE_DATA_DIR,FEATURE_DATA_DIR_6
+from config.dir import DATA_DIR, EM_DATA_DIR,RESULTS_DATA_DIR,FEATURE_DATA_DIR,FEATURE_DATA_DIR_6,FEATURE_DATA_DIR_7
 from sklearn.preprocessing import StandardScaler
 from himalaya.kernel_ridge import KernelRidgeCV,WeightedKernelRidge
 from himalaya.backend import set_backend
@@ -356,7 +356,7 @@ if __name__ == "__main__":
     parser.add_argument("--sessions", nargs='+', type=str, required=True)
     parser.add_argument("--model", choices=['converter', 'converted','converted_same','semantic'], required=True, help='Select model type.')
     parser.add_argument("--mode", choices=['savemodel', 'saveimg'], help='Select mode.')
-    parser.add_argument("--feature", choices=['27', '6'], help='Select feature type.', default=6)
+    parser.add_argument("--feature", choices=['27', '6', '7'], help='Select feature type.', default='7')
     parser.add_argument("--threshold", type=int, default=10000)
     parser.add_argument("--save_voxel", type=str, default='7a', help='Session name where to save/load best voxels.')
     logging.basicConfig(level=logging.INFO)
@@ -369,8 +369,11 @@ if __name__ == "__main__":
     subjs = '_'.join(subject)
     if feature == '27':
         FEATURE_DIR= FEATURE_DATA_DIR
-    else:
+    elif feature == '6':
         FEATURE_DIR= FEATURE_DATA_DIR_6
+    elif feature == '7':
+        FEATURE_DIR= FEATURE_DATA_DIR_7
+
     if mode == "saveimg":
 
         file_name,dir=get_model_filename_dir(subjs,sess,target,model)

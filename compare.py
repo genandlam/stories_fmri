@@ -66,23 +66,27 @@ def compute_r(weight,weight2,sess):
         corr2= sklearn.metrics.r2_score(w1_2.ravel(), w2_2.ravel())
         r.append(corr)
         r2.append(corr2)
-    return float(np.mean(r)), float(np.mean(r2)), float(np.var(r)), float(np.var(r2))
+    return float(np.mean(r)), float(np.mean(r2)), float(np.round(np.std(r), 2)), float(np.round(np.std(r2),2))
 
 def plot_r(sess_r_values,var,sess,subjs,target,model,name):
 
     x = np.array(list(sess_r_values.keys()))  # X-axis 
-    y = list(sess_r_values.values()) # Y-axis
-    vars_r_values = np.linspace(var.values())
-    #plt.plot(x, y)  
+    y = np.array(list(sess_r_values.values())).flatten() # Y-axis
+    vars_r_values = np.array(list(var.values())).flatten()
+    print("x values: ",x)
+    print("y values: ",y)
+    print("var values: ",vars_r_values)
+    plt.plot(x, y)  
     plt.errorbar(x, y, yerr = vars_r_values,
-             fmt ='o')
+             fmt ='o', capsize=5)
     plt.xlabel('Number of training stories')
     plt.ylabel(f'Mean similarities of estimated weights({name})')
     directory=os.path.join(RESULTS_DATA_DIR,subjs,sess+target,model+'_model')
     if not os.path.exists(directory):
         os.makedirs(directory)
-    plt.savefig(os.path.join(directory,f'mean_similarities_weights_{name}.png'))
+    plt.savefig(os.path.join(directory,f'mean_similarities_weights_{name}_error.png'))
     np.save(os.path.join(directory,name+"-values.npy"), sess_r_values)
+    np.save(os.path.join(directory,name+"-values(std).npy"), var)
     plt.close()
 
 def plot_r2(sess,subjs,target,model,name):
@@ -91,15 +95,20 @@ def plot_r2(sess,subjs,target,model,name):
     for subj in subjs:
         file = f'{model}_model/{name}-values.npy'
         r_value = np.load(os.path.join(RESULTS_DATA_DIR,subj,sess+target,file), allow_pickle=True, encoding='latin1').tolist()
+        std_file = f'{model}_model/{name}-values(std).npy'
+        std_value = np.load(os.path.join(RESULTS_DATA_DIR,subj,sess+target,std_file), allow_pickle=True, encoding='latin1').tolist()
         print("r values of ",subj,": ",r_value)
         x = np.array(list(r_value.keys()))  # X-axis 
-        y = list(r_value.values()) # Y-axis
+        y = np.array(list(r_value.values())).flatten() # Y-axis
+        vars_r_values = np.array(list(std_value.values())).flatten()
         plt.plot(x, y, label = subj)
+        plt.errorbar(x, y, yerr = vars_r_values,
+             fmt ='o', capsize=5)
 
     plt.legend()
     plt.xlabel('Number of training stories')
     plt.ylabel(f'Mean similarities of estimated weights({name})')
-    plt.savefig(os.path.join(directory,f'compare_mean_similarities_weights_{name}.png'))
+    plt.savefig(os.path.join(directory,f'compare_mean_similarities_weights_{name}_error.png'))
     plt.close()
 
 if __name__ == "__main__":

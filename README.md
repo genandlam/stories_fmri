@@ -61,7 +61,7 @@ This repository contains code and resources related to fMRI data analysis for na
 8. Compare models
     ```
     $ python compare.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions 1 --model converted --mode single
-    $ python compare.py --subject sub-UTS01_sub-UTS03 --target sub-UTS01 --sessions 1 3 5 7 --model converted --mode multi
+    $ python compare.py --subject sub-UTS01_sub-UTS03 --target sub-UTS02 --sessions 1 3 5 7 --model converted --mode multi
     ```
 
 ## Extra 
