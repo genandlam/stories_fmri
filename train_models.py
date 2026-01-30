@@ -78,7 +78,6 @@ def semantic_features(subject,sess,FEATURE_DIR):
 
         return X_train,X_test
 
-
 def select_voxels(subj,sess,save_voxel,threshold,model,target,FEATURE_DIR):
 # fmri -> fmri 
     if model == "converter":
@@ -377,12 +376,16 @@ if __name__ == "__main__":
     if mode == "saveimg":
 
         file_name,dir=get_model_filename_dir(subjs,sess,target,model)
-        scores_test = np.load(os.path.join(dir,'scores_test.npy'))
-        compare_hist(dir,subjs,model,scores_test,target,sess,save_voxel)
-        compare_heatmap(dir,subjs,model,scores_test,target,save_voxel)
+        file_name_primal=subjs+"_"+target+'_'+sess+model+'_primal_coef_r.npy'
+        primal_coef = np.load(os.path.join(dir,file_name_primal))
+        save_cortex("primal_coef Data",target,primal_coef,dir,model)
+
+        #scores_test = np.load(os.path.join(dir,'scores_test.npy'))
+        #compare_hist(dir,subjs,model,scores_test,target,sess,save_voxel)
+        #compare_heatmap(dir,subjs,model,scores_test,target,save_voxel)
         #plot_alphas(backend,dir,alphas)
-        save_histogram("Test Data",scores_test,dir)
-        save_cortex("Test Data",target,scores_test,dir,model)
+        #save_histogram("Test Data",scores_test,dir)
+        #save_cortex("Test Data",target,scores_test,dir,model)
     #    plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
         exit()
 
