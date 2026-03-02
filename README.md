@@ -78,7 +78,7 @@ This repository contains code and resources related to fMRI data analysis for na
     ```
 6a. Converter model
     ```
-   $  do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converter --mode savemodel ; done; done;
+   $  for i in {1..7..2}; do for j in "a" "b" "c" ; do python train_models.py --subject sub-UTS01 sub-UTS03 --target sub-UTS02 --sessions $i$j --model converter --mode savemodel ; done; done;
     ```
 7a. Converted model
     ```

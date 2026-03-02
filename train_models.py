@@ -221,6 +221,26 @@ def set_pycortex_store(filestore):
     cortex.db.reload_subjects()
     print(f"pycortex store set to {filestore}")
 
+def save_cortex_(title,subj,scores,dir,model):
+    set_pycortex_store(os.path.join(DATA_DIR, 'ds003020/derivative/pycortex-db'))
+    subject = subj.split('-')[1]
+    xfm = subject+'_auto'
+    # First create example voxel data for this subject and transform
+    voxel_data = scores 
+    voxel_vol = cortex.Volume(voxel_data, subject, xfm,vmin=0,cmap="inferno")
+ 
+    # Then we have to get a mapper from voxels to vertices for this transform
+    mapper = cortex.get_mapper(subject, xfm, 'line_nearest', recache=True)
+
+    # Just pass the voxel data through the mapper to get vertex data
+    vertex_map = mapper(voxel_vol)
+
+    # You can plot both as you would normally plot Volume and Vertex data
+    cortex.quickshow(voxel_vol, with_rois=False)
+    plt.savefig(os.path.join(dir,subj+title+'_'+model+'_model_voxel.png'))
+    plt.clf()
+
+
 def save_cortex(title,subj,scores,dir,model):
 
     set_pycortex_store(os.path.join(DATA_DIR, 'ds003020/derivative/pycortex-db'))
@@ -386,7 +406,7 @@ if __name__ == "__main__":
         #plot_alphas(backend,dir,alphas)
         #save_histogram("Test Data",scores_test,dir)
         #save_cortex("Test Data",target,scores_test,dir,model)
-    #    plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
+    #   plot_RGB(scores_test,pipeline,target,dir,backend,model,subjs,sess)
         exit()
 
     Y_train = open_json(target,sess,'fmri_train.json',FEATURE_DIR) # (n_train_stories, n_voxels)
